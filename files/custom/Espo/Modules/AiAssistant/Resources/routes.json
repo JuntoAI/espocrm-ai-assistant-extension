@@ -1,0 +1,14 @@
+[
+    {
+        "route": "/AiAssistant/upload",
+        "method": "post",
+        "actionClassName": "Espo\\Modules\\AiAssistant\\Api\\PostChat",
+        "actionMethodName": "processUpload"
+    },
+    {
+        "route": "/AiAssistant/chat",
+        "method": "post",
+        "actionClassName": "Espo\\Modules\\AiAssistant\\Api\\PostChat",
+        "actionMethodName": "process"
+    }
+]

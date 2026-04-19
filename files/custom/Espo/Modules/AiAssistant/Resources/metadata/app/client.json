@@ -1,0 +1,10 @@
+{
+    "scriptList": [
+        "__APPEND__",
+        "client/custom/modules/ai-assistant/src/ai-panel-init.js"
+    ],
+    "cssList": [
+        "__APPEND__",
+        "client/custom/modules/ai-assistant/src/ai-panel.css"
+    ]
+}

@@ -1,0 +1,643 @@
+/**
+ * AI Assistant Panel Styles
+ *
+ * Consistent with EspoCRM default theme:
+ *   - Font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif
+ *   - Neutral grays for backgrounds
+ *   - Blue for user messages
+ *   - White for AI messages
+ *   - Standard EspoCRM spacing (4px grid)
+ *
+ * Requirements: 1.3, 2.1–2.10
+ */
+
+/* ─── Variables ──────────────────────────────────────── */
+
+:root {
+    --ai-panel-width: 400px;
+    --ai-panel-collapsed-width: 48px;
+    --ai-panel-nav-height: 56px;
+    --ai-panel-font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --ai-panel-bg: #f8f9fa;
+    --ai-panel-border: #dee2e6;
+    --ai-panel-header-bg: #ffffff;
+    --ai-panel-msg-user-bg: #2b6cb0;
+    --ai-panel-msg-user-color: #ffffff;
+    --ai-panel-msg-ai-bg: #ffffff;
+    --ai-panel-msg-ai-color: #212529;
+    --ai-panel-msg-error-bg: #fef2f2;
+    --ai-panel-msg-error-color: #991b1b;
+    --ai-panel-msg-error-border: #fecaca;
+    --ai-panel-input-bg: #ffffff;
+    --ai-panel-input-border: #ced4da;
+    --ai-panel-input-focus: #2b6cb0;
+    --ai-panel-toggle-bg: #2b6cb0;
+    --ai-panel-toggle-color: #ffffff;
+    --ai-panel-toggle-hover: #1e4e8c;
+    --ai-panel-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
+    --ai-panel-radius: 6px;
+    --ai-panel-transition: 0.25s ease;
+}
+
+/* ─── Wrapper ────────────────────────────────────────── */
+
+.ai-panel-wrapper {
+    position: fixed;
+    top: var(--ai-panel-nav-height);
+    right: 0;
+    bottom: 0;
+    z-index: 1050;
+    pointer-events: none;
+    font-family: var(--ai-panel-font-family);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.ai-panel-wrapper * {
+    box-sizing: border-box;
+}
+
+/* ─── Panel Container ────────────────────────────────── */
+
+.ai-panel {
+    position: relative;
+    height: 100%;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: row;
+    transition: width var(--ai-panel-transition);
+}
+
+.ai-panel.is-collapsed {
+    width: 0;
+    overflow: visible;
+}
+
+.ai-panel.is-expanded {
+    width: var(--ai-panel-width);
+    box-shadow: var(--ai-panel-shadow);
+}
+
+/* ─── Toggle Button ──────────────────────────────────── */
+
+.ai-panel-toggle {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    background: var(--ai-panel-toggle-bg);
+    color: var(--ai-panel-toggle-color);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background var(--ai-panel-transition), transform 0.15s ease;
+    z-index: 1051;
+    padding: 0;
+    outline: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    pointer-events: auto;
+}
+
+.ai-panel-toggle:hover {
+    background: var(--ai-panel-toggle-hover);
+    transform: scale(1.05);
+}
+
+.ai-panel-toggle:focus-visible {
+    box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.4), 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+.ai-panel-toggle-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    line-height: 1;
+    margin-top: -2px;
+}
+
+.ai-panel-toggle-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ai-panel.is-expanded .ai-panel-toggle {
+    display: none;
+}
+
+/* ─── Panel Body ─────────────────────────────────────── */
+
+.ai-panel-body {
+    display: flex;
+    flex-direction: column;
+    width: var(--ai-panel-width);
+    height: 100%;
+    background: var(--ai-panel-bg);
+    border-left: 1px solid var(--ai-panel-border);
+    overflow: hidden;
+}
+
+/* ─── Header ─────────────────────────────────────────── */
+
+.ai-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--ai-panel-header-bg);
+    border-bottom: 1px solid var(--ai-panel-border);
+    flex-shrink: 0;
+    min-height: 48px;
+}
+
+.ai-panel-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ai-panel-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #212529;
+    white-space: nowrap;
+}
+
+.ai-panel-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ─── Model Selector ─────────────────────────────────── */
+
+.ai-panel-model-select {
+    font-family: var(--ai-panel-font-family);
+    font-size: 12px;
+    padding: 4px 8px;
+    border: 1px solid var(--ai-panel-input-border);
+    border-radius: 4px;
+    background: var(--ai-panel-input-bg);
+    color: #495057;
+    cursor: pointer;
+    outline: none;
+    max-width: 180px;
+}
+
+.ai-panel-model-select:focus {
+    border-color: var(--ai-panel-input-focus);
+    box-shadow: 0 0 0 2px rgba(43, 108, 176, 0.2);
+}
+
+/* ─── Header Buttons ─────────────────────────────────── */
+
+.ai-panel-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--ai-panel-border);
+    border-radius: 4px;
+    background: var(--ai-panel-input-bg);
+    color: #495057;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    outline: none;
+}
+
+.ai-panel-btn:hover {
+    background: #e9ecef;
+    color: #212529;
+}
+
+.ai-panel-btn:focus-visible {
+    box-shadow: 0 0 0 2px rgba(43, 108, 176, 0.3);
+}
+
+.ai-panel-btn-close {
+    display: none;
+}
+
+.ai-panel.is-expanded .ai-panel-btn-close {
+    display: flex;
+}
+
+/* ─── Messages Area ──────────────────────────────────── */
+
+.ai-panel-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Scrollbar styling */
+.ai-panel-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ai-panel-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ai-panel-messages::-webkit-scrollbar-thumb {
+    background: #ced4da;
+    border-radius: 3px;
+}
+
+.ai-panel-messages::-webkit-scrollbar-thumb:hover {
+    background: #adb5bd;
+}
+
+/* ─── Welcome Message ────────────────────────────────── */
+
+.ai-panel-welcome {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    color: #6c757d;
+    padding: 24px;
+}
+
+.ai-panel-welcome p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* ─── Message Bubbles ────────────────────────────────── */
+
+.ai-panel-message {
+    max-width: 88%;
+    padding: 8px 12px;
+    border-radius: var(--ai-panel-radius);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* User messages — right-aligned, blue */
+.ai-panel-message-user {
+    align-self: flex-end;
+    background: var(--ai-panel-msg-user-bg);
+    color: var(--ai-panel-msg-user-color);
+    border-bottom-right-radius: 2px;
+}
+
+/* AI messages — left-aligned, white */
+.ai-panel-message-assistant {
+    align-self: flex-start;
+    background: var(--ai-panel-msg-ai-bg);
+    color: var(--ai-panel-msg-ai-color);
+    border: 1px solid var(--ai-panel-border);
+    border-bottom-left-radius: 2px;
+}
+
+/* Error messages — distinct red-tinted background */
+.ai-panel-message-error {
+    background: var(--ai-panel-msg-error-bg);
+    color: var(--ai-panel-msg-error-color);
+    border: 1px solid var(--ai-panel-msg-error-border);
+}
+
+/* ─── Message Content ────────────────────────────────── */
+
+.ai-panel-message-content {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.ai-panel-message-content strong {
+    font-weight: 600;
+}
+
+.ai-panel-message-content code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 13px;
+    padding: 1px 4px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 3px;
+}
+
+.ai-panel-message-content pre {
+    margin: 8px 0;
+    padding: 10px;
+    background: #1e293b;
+    color: #e2e8f0;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.ai-panel-message-content pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+}
+
+.ai-panel-message-content ul {
+    margin: 6px 0;
+    padding-left: 20px;
+}
+
+.ai-panel-message-content li {
+    margin-bottom: 2px;
+}
+
+/* ─── Source Attributions ────────────────────────────── */
+
+.ai-panel-message-sources {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--ai-panel-border);
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.ai-panel-sources-label {
+    font-weight: 600;
+}
+
+.ai-panel-message-sources a {
+    color: var(--ai-panel-input-focus);
+    text-decoration: none;
+}
+
+.ai-panel-message-sources a:hover {
+    text-decoration: underline;
+}
+
+/* ─── Typing Indicator ───────────────────────────────── */
+
+.ai-panel-typing {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    flex-shrink: 0;
+}
+
+.ai-panel-typing-dot {
+    width: 8px;
+    height: 8px;
+    background: #adb5bd;
+    border-radius: 50%;
+    animation: ai-panel-bounce 1.4s infinite ease-in-out both;
+}
+
+.ai-panel-typing-dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.ai-panel-typing-dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+.ai-panel-typing-dot:nth-child(3) {
+    animation-delay: 0s;
+}
+
+@keyframes ai-panel-bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.4;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ─── Status Indicator ───────────────────────────────── */
+
+.ai-panel-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    flex-shrink: 0;
+    color: #6c757d;
+    font-size: 13px;
+}
+
+.ai-panel-status-icon {
+    width: 8px;
+    height: 8px;
+    background: var(--ai-panel-toggle-bg);
+    border-radius: 50%;
+    animation: ai-panel-pulse 1.5s infinite ease-in-out;
+    flex-shrink: 0;
+}
+
+.ai-panel-status-text {
+    animation: ai-panel-fade-in 0.3s ease;
+}
+
+@keyframes ai-panel-pulse {
+    0%, 100% { opacity: 0.4; transform: scale(0.85); }
+    50% { opacity: 1; transform: scale(1.1); }
+}
+
+@keyframes ai-panel-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ─── Tool Badges ────────────────────────────────────── */
+
+.ai-panel-tools-used {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--ai-panel-border);
+}
+
+.ai-panel-tool-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #e8f4f8;
+    color: #1a6b8a;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.ai-panel-tool-badge-error {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+/* ─── CRM Entity Links ──────────────────────────────── */
+
+.ai-panel-crm-link {
+    color: var(--ai-panel-input-focus);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--ai-panel-input-focus);
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.ai-panel-crm-link:hover {
+    border-bottom-style: solid;
+    text-decoration: none;
+}
+
+/* ─── Input Area ─────────────────────────────────────── */
+
+.ai-panel-input-area {
+    padding: 10px 12px;
+    background: var(--ai-panel-header-bg);
+    border-top: 1px solid var(--ai-panel-border);
+    flex-shrink: 0;
+}
+
+.ai-panel-input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.ai-panel-textarea {
+    flex: 1;
+    font-family: var(--ai-panel-font-family);
+    font-size: 14px;
+    padding: 10px 12px;
+    border: 1px solid var(--ai-panel-input-border);
+    border-radius: var(--ai-panel-radius);
+    background: var(--ai-panel-input-bg);
+    color: #212529;
+    resize: none;
+    outline: none;
+    min-height: 68px;
+    max-height: 150px;
+    line-height: 1.5;
+    transition: border-color 0.15s ease;
+    overflow-y: auto;
+}
+
+.ai-panel-textarea:focus {
+    border-color: var(--ai-panel-input-focus);
+    box-shadow: 0 0 0 2px rgba(43, 108, 176, 0.2);
+}
+
+.ai-panel-textarea::placeholder {
+    color: #adb5bd;
+}
+
+.ai-panel-btn-send {
+    background: var(--ai-panel-toggle-bg);
+    color: var(--ai-panel-toggle-color);
+    border-color: var(--ai-panel-toggle-bg);
+    flex-shrink: 0;
+}
+
+.ai-panel-btn-send:hover {
+    background: var(--ai-panel-toggle-hover);
+    border-color: var(--ai-panel-toggle-hover);
+    color: var(--ai-panel-toggle-color);
+}
+
+.ai-panel-input-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.ai-panel-btn-upload {
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+/* ─── File Preview ───────────────────────────────────── */
+
+.ai-panel-file-preview {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 4px 8px;
+    background: #e8f4f8;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #1a6b8a;
+}
+
+.ai-panel-file-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.ai-panel-file-remove {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+.ai-panel-file-remove:hover {
+    color: #991b1b;
+}
+
+/* ─── Mobile Responsive (< 768px) ───────────────────── */
+
+@media (max-width: 767px) {
+    .ai-panel-wrapper {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
+
+    .ai-panel.is-mobile.is-expanded {
+        width: 100%;
+        height: 100%;
+    }
+
+    .ai-panel.is-mobile.is-expanded .ai-panel-body {
+        width: 100%;
+    }
+
+    .ai-panel.is-mobile.is-expanded .ai-panel-toggle {
+        display: none;
+    }
+
+    .ai-panel.is-mobile.is-expanded .ai-panel-btn-close {
+        display: flex;
+    }
+
+    .ai-panel.is-mobile.is-collapsed .ai-panel-toggle {
+        position: fixed;
+        bottom: 16px;
+        right: 16px;
+        top: auto;
+        left: auto;
+        border-radius: 50%;
+        width: 52px;
+        height: 52px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+}
