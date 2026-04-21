@@ -63,7 +63,7 @@
         messages: [],
         sessionId: null,
         loadingTimers: [],
-        pendingFile: null,
+        pendingFiles: [],
     };
 
     // ── Wait for page ready ─────────────────────────────
@@ -119,15 +119,12 @@
                         '<div class="ai-panel-input-buttons">' +
                             '<label class="ai-panel-btn ai-panel-btn-upload" title="Upload File">' +
                                 '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"></path></svg>' +
-                                '<input type="file" data-file-input accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.html,application/pdf,image/*,text/*" style="display:none">' +
+                                '<input type="file" data-file-input multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.html,application/pdf,image/*,text/*" style="display:none">' +
                             '</label>' +
                             '<button class="ai-panel-btn ai-panel-btn-send" data-action="send">&#9654;</button>' +
                         '</div>' +
                     '</div>' +
-                    '<div class="ai-panel-file-preview" data-file-preview style="display:none">' +
-                        '<span class="ai-panel-file-name" data-file-name></span>' +
-                        '<button class="ai-panel-file-remove" data-action="removeFile">&times;</button>' +
-                    '</div>' +
+                    '<div class="ai-panel-file-list" data-file-list></div>' +
                 '</div>' +
             '</div>' +
         '</div>';
@@ -176,29 +173,32 @@
 
         // File upload handling
         el.querySelector('[data-file-input]').addEventListener('change', function () {
-            var file = this.files && this.files[0];
-            if (!file) return;
-            if (!file.type.match(/^(application\/pdf|image\/(png|jpeg|gif|webp)|text\/(plain|csv|html))$/)) {
-                addMessage('error', 'Only PDF files are supported.');
-                renderMessages(el);
-                this.value = '';
-                return;
+            var files = this.files;
+            if (!files || !files.length) return;
+            for (var i = 0; i < files.length; i++) {
+                var file = files[i];
+                if (!file.type.match(/^(application\/pdf|image\/(png|jpeg|gif|webp)|text\/(plain|csv|html))$/)) {
+                    addMessage('error', file.name + ': unsupported file type.');
+                    renderMessages(el);
+                    continue;
+                }
+                if (file.size > 20 * 1024 * 1024) {
+                    addMessage('error', file.name + ': file too large (max 20 MB).');
+                    renderMessages(el);
+                    continue;
+                }
+                state.pendingFiles.push(file);
             }
-            if (file.size > 20 * 1024 * 1024) {
-                addMessage('error', 'File too large. Please upload a PDF under 20 MB.');
-                renderMessages(el);
-                this.value = '';
-                return;
-            }
-            state.pendingFile = file;
-            el.querySelector('[data-file-preview]').style.display = 'flex';
-            el.querySelector('[data-file-name]').textContent = file.name;
+            this.value = '';
+            renderFileList(el);
         });
 
-        el.querySelector('[data-action="removeFile"]').addEventListener('click', function () {
-            state.pendingFile = null;
-            el.querySelector('[data-file-preview]').style.display = 'none';
-            el.querySelector('[data-file-input]').value = '';
+        el.querySelector('[data-file-list]').addEventListener('click', function (e) {
+            if (e.target.classList.contains('ai-panel-file-remove')) {
+                var idx = parseInt(e.target.getAttribute('data-idx'), 10);
+                state.pendingFiles.splice(idx, 1);
+                renderFileList(el);
+            }
         });
     }
 
@@ -223,66 +223,94 @@
     function sendMessage(el) {
         var input = el.querySelector('[data-input]');
         var text = (input.value || '').trim();
-        var file = state.pendingFile || null;
-        if ((!text && !file) || state.loading) return;
+        var files = state.pendingFiles.slice();
+        if ((!text && !files.length) || state.loading) return;
 
         input.value = '';
         input.style.height = 'auto';
 
         if (text) {
             addMessage('user', text + (file ? ' 📎 ' + file.name : ''));
-        } else if (file) {
+        } else if (files.length) {
             addMessage('user', '📎 ' + file.name);
         }
         renderMessages(el);
         setLoading(el, true);
 
         // Clear file state
-        state.pendingFile = null;
-        el.querySelector('[data-file-preview]').style.display = 'none';
+        state.pendingFiles = [];
+        renderFileList(el);
         el.querySelector('[data-file-input]').value = '';
 
-        if (file) {
-            // Upload file as multipart via XHR with EspoCRM auth cookie
-            var formData = new FormData();
-            formData.append('file', file);
-            if (text) formData.append('message', text);
-            if (state.model) formData.append('model', state.model);
-            if (state.sessionId) formData.append('sessionId', state.sessionId);
+        if (files.length) {
+            // Upload files sequentially, then send the text message
+            var uploadIdx = 0;
 
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', window.location.origin + '/api/v1/AiAssistant/upload', true);
+            function uploadNext() {
+                if (uploadIdx >= files.length) {
+                    // All files uploaded — now send the text message if any
+                    if (text) {
+                        var chatPayload = { message: text };
+                        if (state.model) chatPayload.model = state.model;
+                        if (state.sessionId) chatPayload.sessionId = state.sessionId;
 
-            // Copy the auth cookie — EspoCRM uses cookie-based auth for same-origin
-            // The cookie is sent automatically by the browser for same-origin XHR
-            xhr.withCredentials = true;
-
-            // Also try to get the Espo-Authorization header from the base URL
-            // EspoCRM stores auth in a cookie named 'auth-token-secret' or similar
-            try {
-                // Espo.Ajax uses jQuery.ajax internally which reads from $.ajaxSetup
-                var jqSettings = (typeof $ !== 'undefined' && $.ajaxSetup) ? $.ajaxSetup() : {};
-                if (jqSettings.headers) {
-                    for (var key in jqSettings.headers) {
-                        xhr.setRequestHeader(key, jqSettings.headers[key]);
-                    }
-                }
-            } catch (e) {}
-
-            xhr.onload = function () {
-                try {
-                    var data = JSON.parse(xhr.responseText);
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        handleResponse(el, data);
+                        Espo.Ajax.postRequest('AiAssistant/chat', chatPayload)
+                            .then(function (data) { handleResponse(el, data); })
+                            .catch(function () { handleError(el, null); });
                     } else {
-                        handleError(el, xhr);
+                        setLoading(el, false);
                     }
-                } catch (e) {
-                    handleError(el, null);
+                    return;
                 }
-            };
-            xhr.onerror = function () { handleError(el, null); };
-            xhr.send(formData);
+
+                var currentFile = files[uploadIdx];
+                var formData = new FormData();
+                formData.append('file', currentFile);
+                // Only send message with the last file if no separate chat call
+                if (!text && uploadIdx === files.length - 1) {
+                    // no message
+                }
+                if (state.model) formData.append('model', state.model);
+                if (state.sessionId) formData.append('sessionId', state.sessionId);
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', window.location.origin + '/api/v1/AiAssistant/upload', true);
+                xhr.withCredentials = true;
+
+                try {
+                    var jqSettings = (typeof $ !== 'undefined' && $.ajaxSetup) ? $.ajaxSetup() : {};
+                    if (jqSettings.headers) {
+                        for (var key in jqSettings.headers) {
+                            xhr.setRequestHeader(key, jqSettings.headers[key]);
+                        }
+                    }
+                } catch (e) {}
+
+                xhr.onload = function () {
+                    try {
+                        var data = JSON.parse(xhr.responseText);
+                        if (data.sessionId) state.sessionId = data.sessionId;
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            // Show upload confirmation as assistant message
+                            if (data.message) {
+                                addMessage('assistant', data.message);
+                                renderMessages(el);
+                            }
+                        }
+                    } catch (e) {}
+                    uploadIdx++;
+                    uploadNext();
+                };
+                xhr.onerror = function () {
+                    addMessage('error', 'Failed to upload ' + currentFile.name);
+                    renderMessages(el);
+                    uploadIdx++;
+                    uploadNext();
+                };
+                xhr.send(formData);
+            }
+
+            uploadNext();
         } else {
             // Regular text message
             var payload = { message: text };
@@ -308,6 +336,22 @@
                 .catch(function () { handleError(el, null); });
             }
         }
+    }
+
+    function renderFileList(el) {
+        var list = el.querySelector('[data-file-list]');
+        if (!state.pendingFiles.length) {
+            list.innerHTML = '';
+            return;
+        }
+        var html = '';
+        for (var i = 0; i < state.pendingFiles.length; i++) {
+            html += '<div class="ai-panel-file-item">' +
+                '<span class="ai-panel-file-name">' + state.pendingFiles[i].name + '</span>' +
+                '<button class="ai-panel-file-remove" data-idx="' + i + '">&times;</button>' +
+            '</div>';
+        }
+        list.innerHTML = html;
     }
 
     function handleResponse(el, data) {
