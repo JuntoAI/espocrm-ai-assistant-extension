@@ -191,16 +191,8 @@ define('ai-assistant:helpers/api-client', [], function () {
         var xhr = new XMLHttpRequest();
         xhr.open('POST', UPLOAD_ENDPOINT, true);
 
-        // Include EspoCRM auth header if available.
-        // Espo.Ajax sets auth cookies automatically for same-origin,
-        // but HMAC-based auth needs the explicit header.
-        if (typeof Espo !== 'undefined' && Espo.Ajax && Espo.Ajax.getHeader) {
-            var authHeader = Espo.Ajax.getHeader('Espo-Authorization');
-
-            if (authHeader) {
-                xhr.setRequestHeader('Espo-Authorization', authHeader);
-            }
-        }
+        // Send session cookies for same-origin EspoCRM authentication.
+        xhr.withCredentials = true;
 
         xhr.onload = function () {
             if (xhr.status >= 200 && xhr.status < 300) {

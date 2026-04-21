@@ -527,15 +527,8 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
                     var xhr = new XMLHttpRequest();
                     xhr.open('POST', 'api/v1/AiAssistant/chat/upload', true);
 
-                    // EspoCRM sets auth cookies automatically, but we need
-                    // to include the Espo-Authorization header if using HMAC.
-                    var authHeader = Espo.Ajax && Espo.Ajax.getHeader
-                        ? Espo.Ajax.getHeader('Espo-Authorization')
-                        : null;
-
-                    if (authHeader) {
-                        xhr.setRequestHeader('Espo-Authorization', authHeader);
-                    }
+                    // Send session cookies for same-origin EspoCRM authentication.
+                    xhr.withCredentials = true;
 
                     xhr.onload = function () {
                         if (xhr.status >= 200 && xhr.status < 300) {
