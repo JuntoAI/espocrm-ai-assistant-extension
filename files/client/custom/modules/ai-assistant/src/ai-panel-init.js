@@ -230,9 +230,11 @@
         input.style.height = 'auto';
 
         if (text) {
-            addMessage('user', text + (file ? ' 📎 ' + file.name : ''));
+            var fileNames = files.map(function(f) { return f.name; }).join(', ');
+            addMessage('user', text + (files.length ? ' 📎 ' + fileNames : ''));
         } else if (files.length) {
-            addMessage('user', '📎 ' + file.name);
+            var fileNames = files.map(function(f) { return f.name; }).join(', ');
+            addMessage('user', '📎 ' + fileNames);
         }
         renderMessages(el);
         setLoading(el, true);
