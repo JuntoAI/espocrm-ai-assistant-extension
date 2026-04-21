@@ -347,11 +347,6 @@ class PostChat implements Action
 
         // Any other cURL error.
         if ($curlErrno !== 0) {
-            error_log(
-                'AI Backend cURL error: errno=' . $curlErrno
-                . ' | error=' . $curlError
-                . ' | httpCode=' . $httpCode
-            );
             return (object) [
                 'message' => 'An unexpected error occurred while contacting the AI service. Please try again later.',
             ];
@@ -368,10 +363,26 @@ class PostChat implements Action
 
         // Backend returned an HTTP error status.
         if ($httpCode >= 400) {
-            // Log the error for debugging.
-            error_log(
-                'AI Backend error: HTTP ' . $httpCode
+            // Log the error for debugging — write to a file since error_log may not be visible.
+            @file_put_contents(
+                '/tmp/ai_upload_debug.log',
+                date('Y-m-d H:i:s') . ' | HTTP ' . $httpCode
+                . ' | cURL errno=' . $curlErrno
                 . ' | Response: ' . substr((string) $responseBody, 0, 500)
+                . "\n",
+                FILE_APPEND
+            );
+        }
+
+        // Also log cURL errors.
+        if ($curlErrno !== 0) {
+            @file_put_contents(
+                '/tmp/ai_upload_debug.log',
+                date('Y-m-d H:i:s') . ' | cURL ERROR errno=' . $curlErrno
+                . ' | error=' . $curlError
+                . ' | httpCode=' . $httpCode
+                . "\n",
+                FILE_APPEND
             );
         }
 
