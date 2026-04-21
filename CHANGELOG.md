@@ -4,6 +4,11 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.1.3] - 2026-04-21
+
+### Fixed
+- Upload XHR now reads `Espo.Ajax.headers['Espo-Authorization']` and sets it explicitly on the XHR request, fixing the `- -` unauthenticated requests. Also fixed missing route `/AiAssistant/chat/upload` in `routes.json` (was `/AiAssistant/upload`).
+
 ## [1.1.2] - 2026-04-21
 
 ### Fixed

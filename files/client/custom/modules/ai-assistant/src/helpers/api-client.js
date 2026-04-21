@@ -194,6 +194,18 @@ define('ai-assistant:helpers/api-client', [], function () {
         // Send session cookies for same-origin EspoCRM authentication.
         xhr.withCredentials = true;
 
+        // Also set the Espo-Authorization header that EspoCRM uses for API auth.
+        // Espo.Ajax stores the current auth header in its headers map.
+        try {
+            var espoHeaders = (Espo && Espo.Ajax && Espo.Ajax.headers) ? Espo.Ajax.headers : {};
+            var espoAuth = espoHeaders['Espo-Authorization'] || espoHeaders['Authorization'];
+            if (espoAuth) {
+                xhr.setRequestHeader('Espo-Authorization', espoAuth);
+            }
+        } catch (e) {
+            // ignore — withCredentials cookie fallback will handle it
+        }
+
         xhr.onload = function () {
             if (xhr.status >= 200 && xhr.status < 300) {
                 try {

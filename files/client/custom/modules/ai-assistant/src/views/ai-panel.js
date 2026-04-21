@@ -530,6 +530,17 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
                     // Send session cookies for same-origin EspoCRM authentication.
                     xhr.withCredentials = true;
 
+                    // Also set the Espo-Authorization header that EspoCRM uses for API auth.
+                    try {
+                        var espoHeaders = (Espo && Espo.Ajax && Espo.Ajax.headers) ? Espo.Ajax.headers : {};
+                        var espoAuth = espoHeaders['Espo-Authorization'] || espoHeaders['Authorization'];
+                        if (espoAuth) {
+                            xhr.setRequestHeader('Espo-Authorization', espoAuth);
+                        }
+                    } catch (e) {
+                        // ignore
+                    }
+
                     xhr.onload = function () {
                         if (xhr.status >= 200 && xhr.status < 300) {
                             try {

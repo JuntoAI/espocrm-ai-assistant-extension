@@ -258,6 +258,17 @@
                 var xhr = new XMLHttpRequest();
                 xhr.open('POST', 'api/v1/AiAssistant/chat/upload');
                 xhr.withCredentials = true;
+
+                // Also set the Espo-Authorization header that EspoCRM uses for API auth.
+                try {
+                    var espoHeaders = (Espo && Espo.Ajax && Espo.Ajax.headers) ? Espo.Ajax.headers : {};
+                    var espoAuth = espoHeaders['Espo-Authorization'] || espoHeaders['Authorization'];
+                    if (espoAuth) {
+                        xhr.setRequestHeader('Espo-Authorization', espoAuth);
+                    }
+                } catch (e) {
+                    // ignore
+                }
                 xhr.onload = function () {
                     try {
                         var data = JSON.parse(xhr.responseText);
