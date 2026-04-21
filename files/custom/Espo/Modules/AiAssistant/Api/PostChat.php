@@ -355,7 +355,6 @@ class PostChat implements Action
                 '_debug_curlError' => $curlError,
                 '_debug_httpCode' => $httpCode,
             ];
-            ];
         }
 
         // Decode the response.
