@@ -4,6 +4,11 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.1.6] - 2026-04-21
+
+### Fixed
+- Reverted getUserApiKey Strategy 2 removal — OIDC session tokens don't work with X-Api-Key header on the ai-backend. The shared API user key is required for both chat and upload. Chat was broken in v1.1.5.
+
 ## [1.1.5] - 2026-04-21
 
 ### Fixed

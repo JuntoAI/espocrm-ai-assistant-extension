@@ -161,8 +161,27 @@ class PostChat implements Action
             }
         }
 
-        // Strategy 2: Fall back to the user's active AuthToken (session token).
-        // This is the standard case for browser-based users logged in via OIDC or password.
+        // Strategy 2: Look for a dedicated API user (type = 'api') in the User entity.
+        // This is needed because browser users authenticated via OIDC may not have
+        // a session token that works with the X-Api-Key header on the AI backend.
+        $apiUser = $this->entityManager
+            ->getRDBRepository('User')
+            ->where([
+                'type' => 'api',
+                'isActive' => true,
+            ])
+            ->order('createdAt', 'DESC')
+            ->findOne();
+
+        if ($apiUser !== null) {
+            $apiKey = $apiUser->get('apiKey');
+
+            if (is_string($apiKey) && $apiKey !== '') {
+                return $apiKey;
+            }
+        }
+
+        // Strategy 3: Fall back to the user's active AuthToken (session token).
         $authToken = $this->entityManager
             ->getRDBRepository('AuthToken')
             ->where([
