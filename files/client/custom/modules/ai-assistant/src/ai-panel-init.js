@@ -256,16 +256,8 @@
             if (typeof Espo !== 'undefined' && Espo.Ajax) {
                 // Use raw XMLHttpRequest for multipart — Espo.Ajax doesn't support FormData well
                 var xhr = new XMLHttpRequest();
-                xhr.open('POST', 'api/v1/AiAssistant/upload');
-                // Copy auth headers from Espo
-                var authHeader = Espo.Utils && Espo.Utils.obtainBaseUrl ? null : null;
-                try {
-                    var storage = Espo.Storage || (window.Espo && window.Espo.Storage);
-                    if (storage) {
-                        var token = storage.get('auth', 'token');
-                        if (token) xhr.setRequestHeader('Authorization', 'Basic ' + token);
-                    }
-                } catch (e) {}
+                xhr.open('POST', 'api/v1/AiAssistant/chat/upload');
+                xhr.withCredentials = true;
                 xhr.onload = function () {
                     try {
                         var data = JSON.parse(xhr.responseText);
@@ -277,8 +269,9 @@
                 xhr.onerror = function () { handleError(el, null); };
                 xhr.send(formData);
             } else {
-                fetch('api/v1/AiAssistant/upload', {
+                fetch('api/v1/AiAssistant/chat/upload', {
                     method: 'POST',
+                    credentials: 'same-origin',
                     body: formData,
                 })
                 .then(function (r) { return r.json(); })

@@ -4,6 +4,11 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.1.2] - 2026-04-21
+
+### Fixed
+- PDF upload in `ai-panel-init.js` hitting wrong endpoint (`/AiAssistant/upload` instead of `/AiAssistant/chat/upload`), missing `withCredentials = true`, and using a non-existent auth token lookup — all three issues caused 400 errors
+
 ## [1.1.1] - 2026-04-21
 
 ### Fixed
