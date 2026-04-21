@@ -335,6 +335,7 @@ class PostChat implements Action
         if ($curlErrno === CURLE_COULDNT_CONNECT || $curlErrno === CURLE_COULDNT_RESOLVE_HOST) {
             return (object) [
                 'message' => 'The AI service is temporarily unavailable. Please try again in a moment.',
+                '_debug' => 'connection_refused',
             ];
         }
 
@@ -342,6 +343,7 @@ class PostChat implements Action
         if ($curlErrno === CURLE_OPERATION_TIMEDOUT) {
             return (object) [
                 'message' => "I'm having trouble processing your request. Please try again in a moment.",
+                '_debug' => 'timeout',
             ];
         }
 
@@ -349,6 +351,10 @@ class PostChat implements Action
         if ($curlErrno !== 0) {
             return (object) [
                 'message' => 'An unexpected error occurred while contacting the AI service. Please try again later.',
+                '_debug_curlErrno' => $curlErrno,
+                '_debug_curlError' => $curlError,
+                '_debug_httpCode' => $httpCode,
+            ];
             ];
         }
 
@@ -390,6 +396,8 @@ class PostChat implements Action
             return (object) [
                 'message' => $decoded->error
                     ?? 'The AI service encountered an internal error. Please try again later.',
+                '_debug_httpCode' => $httpCode,
+                '_debug_response' => substr((string) $responseBody, 0, 300),
             ];
         }
 
