@@ -518,7 +518,7 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
                     if (model) { formData.append('model', model); }
                     if (sessionId) { formData.append('sessionId', sessionId); }
 
-                    fetch('api/v1/AiAssistant/chat/upload', {
+                    fetch('api/v1/AiAssistant/upload', {
                         method: 'POST',
                         credentials: 'include',
                         body: formData,

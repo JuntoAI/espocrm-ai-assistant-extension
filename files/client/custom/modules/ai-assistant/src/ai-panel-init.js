@@ -257,7 +257,7 @@
                 if (state.model) payload.model = state.model;
                 if (state.sessionId) payload.sessionId = state.sessionId;
 
-                Espo.Ajax.postRequest('AiAssistant/chat/upload', payload)
+                Espo.Ajax.postRequest('AiAssistant/upload', payload)
                     .then(function (data) { handleResponse(el, data); })
                     .catch(function () { handleError(el, null); });
             };

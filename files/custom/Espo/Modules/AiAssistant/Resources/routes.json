@@ -1,6 +1,6 @@
 [
     {
-        "route": "/AiAssistant/chat/upload",
+        "route": "/AiAssistant/upload",
         "method": "post",
         "actionClassName": "Espo\\Modules\\AiAssistant\\Api\\PostChat",
         "actionMethodName": "processUpload"

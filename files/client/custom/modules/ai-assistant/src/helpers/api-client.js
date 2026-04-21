@@ -17,7 +17,7 @@ define('ai-assistant:helpers/api-client', [], function () {
     var STORAGE_KEY_MODEL = 'ai-panel-model';
 
     var CHAT_ENDPOINT = 'AiAssistant/chat';
-    var UPLOAD_ENDPOINT = 'api/v1/AiAssistant/chat/upload';
+    var UPLOAD_ENDPOINT = 'api/v1/AiAssistant/upload';
 
     function mapErrorMessage(status, responseJSON) {
         if (status === 429) {
