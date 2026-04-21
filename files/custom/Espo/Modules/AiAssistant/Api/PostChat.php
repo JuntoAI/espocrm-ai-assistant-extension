@@ -115,20 +115,49 @@ class PostChat implements Action
             $fields['sessionId'] = $body->sessionId;
         }
 
-        // Retrieve the uploaded file from PHP's $_FILES superglobal.
+        // Accept file from either multipart ($_FILES) or base64 JSON (fileData).
         $fileKey = 'file';
 
-        if (!isset($_FILES[$fileKey]) || $_FILES[$fileKey]['error'] !== UPLOAD_ERR_OK) {
-            throw new BadRequest('A valid file upload is required.');
-        }
+        if (isset($_FILES[$fileKey]) && $_FILES[$fileKey]['error'] === UPLOAD_ERR_OK) {
+            // Multipart upload (from XHR/fetch with FormData).
+            $filePath = $_FILES[$fileKey]['tmp_name'];
+            $fileName = $_FILES[$fileKey]['name'];
+            $fileMime = $_FILES[$fileKey]['type'] ?: 'application/pdf';
+        } elseif (isset($body->fileData) && is_string($body->fileData) && $body->fileData !== '') {
+            // Base64 JSON upload (from Espo.Ajax.postRequest).
+            $decoded = base64_decode($body->fileData, true);
 
-        $filePath = $_FILES[$fileKey]['tmp_name'];
-        $fileName = $_FILES[$fileKey]['name'];
-        $fileMime = $_FILES[$fileKey]['type'] ?: 'application/pdf';
+            if ($decoded === false) {
+                throw new BadRequest('fileData is not valid base64.');
+            }
+
+            $filePath = tempnam(sys_get_temp_dir(), 'espo_upload_');
+
+            if ($filePath === false || file_put_contents($filePath, $decoded) === false) {
+                throw new \RuntimeException('Failed to write temporary file.');
+            }
+
+            $fileName = (isset($body->fileName) && is_string($body->fileName))
+                ? $body->fileName
+                : 'upload.pdf';
+
+            $fileMime = (isset($body->fileMime) && is_string($body->fileMime))
+                ? $body->fileMime
+                : 'application/pdf';
+        } else {
+            throw new BadRequest('A file upload is required (multipart or base64 fileData).');
+        }
 
         $backendUrl = $this->getBackendUrl() . '/chat/upload';
 
-        $result = $this->postMultipart($backendUrl, $fields, $filePath, $fileName, $fileMime);
+        try {
+            $result = $this->postMultipart($backendUrl, $fields, $filePath, $fileName, $fileMime);
+        } finally {
+            // Clean up temp file if we created one from base64.
+            if (isset($body->fileData) && isset($filePath) && file_exists($filePath)) {
+                @unlink($filePath);
+            }
+        }
 
         return ResponseComposer::json($result);
     }
