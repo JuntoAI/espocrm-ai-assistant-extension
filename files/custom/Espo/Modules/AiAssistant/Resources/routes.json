@@ -2,13 +2,11 @@
     {
         "route": "/AiAssistant/upload",
         "method": "post",
-        "actionClassName": "Espo\\Modules\\AiAssistant\\Api\\PostChat",
-        "actionMethodName": "processUpload"
+        "actionClassName": "Espo\\Modules\\AiAssistant\\Api\\PostUpload"
     },
     {
         "route": "/AiAssistant/chat",
         "method": "post",
-        "actionClassName": "Espo\\Modules\\AiAssistant\\Api\\PostChat",
-        "actionMethodName": "process"
+        "actionClassName": "Espo\\Modules\\AiAssistant\\Api\\PostChat"
     }
 ]
