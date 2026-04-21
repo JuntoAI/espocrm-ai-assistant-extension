@@ -4,6 +4,11 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.1.4] - 2026-04-21
+
+### Fixed
+- PDF upload auth completely reworked: dropped XHR multipart approach (which could never get the Espo-Authorization header) in favour of FileReader base64 + Espo.Ajax.postRequest. Espo.Ajax handles EspoCRM auth automatically. PHP proxy now accepts JSON with base64 fileData, decodes to a temp file, and forwards as multipart to the AI backend.
+
 ## [1.1.3] - 2026-04-21
 
 ### Fixed

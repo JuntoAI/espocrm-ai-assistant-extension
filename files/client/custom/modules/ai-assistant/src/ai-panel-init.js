@@ -253,42 +253,24 @@
             if (state.model) formData.append('model', state.model);
             if (state.sessionId) formData.append('sessionId', state.sessionId);
 
-            if (typeof Espo !== 'undefined' && Espo.Ajax) {
-                // Use raw XMLHttpRequest for multipart — Espo.Ajax doesn't support FormData well
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', 'api/v1/AiAssistant/chat/upload');
-                xhr.withCredentials = true;
-
-                // Also set the Espo-Authorization header that EspoCRM uses for API auth.
-                try {
-                    var espoHeaders = (Espo && Espo.Ajax && Espo.Ajax.headers) ? Espo.Ajax.headers : {};
-                    var espoAuth = espoHeaders['Espo-Authorization'] || espoHeaders['Authorization'];
-                    if (espoAuth) {
-                        xhr.setRequestHeader('Espo-Authorization', espoAuth);
-                    }
-                } catch (e) {
-                    // ignore
-                }
-                xhr.onload = function () {
-                    try {
-                        var data = JSON.parse(xhr.responseText);
-                        handleResponse(el, data);
-                    } catch (e) {
-                        handleError(el, xhr);
-                    }
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var base64 = e.target.result;
+                var base64Data = base64.split(',')[1] || base64;
+                var payload = {
+                    fileData: base64Data,
+                    fileName: file.name,
+                    fileMime: file.type || 'application/pdf',
                 };
-                xhr.onerror = function () { handleError(el, null); };
-                xhr.send(formData);
-            } else {
-                fetch('api/v1/AiAssistant/chat/upload', {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    body: formData,
-                })
-                .then(function (r) { return r.json(); })
-                .then(function (data) { handleResponse(el, data); })
-                .catch(function () { handleError(el, null); });
-            }
+                if (text) payload.message = text;
+                if (state.model) payload.model = state.model;
+                if (state.sessionId) payload.sessionId = state.sessionId;
+                Espo.Ajax.postRequest('AiAssistant/chat/upload', payload)
+                    .then(function (data) { handleResponse(el, data); })
+                    .catch(function () { handleError(el, null); });
+            };
+            reader.onerror = function () { handleError(el, null); };
+            reader.readAsDataURL(file);
         } else {
             // Regular text message
             var payload = { message: text };

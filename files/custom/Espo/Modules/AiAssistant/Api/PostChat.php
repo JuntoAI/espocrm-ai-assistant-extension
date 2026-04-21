@@ -84,16 +84,47 @@ class PostChat implements Action
     /**
      * Handle POST /api/v1/AiAssistant/chat/upload
      *
-     * Forwards a multipart file upload (PDF) plus metadata to the
-     * AI Backend's /chat/upload endpoint.
+     * Accepts a JSON body with base64-encoded file data and forwards
+     * it to the AI Backend's /chat/upload endpoint as multipart.
+     *
+     * Using JSON + base64 instead of multipart allows Espo.Ajax to
+     * handle authentication automatically on the frontend.
      */
     public function processUpload(Request $request): Response
     {
         $body = $request->getParsedBody();
 
+        // Validate base64 file data.
+        if (!isset($body->fileData) || !is_string($body->fileData) || $body->fileData === '') {
+            throw new BadRequest('fileData is required (base64-encoded file content).');
+        }
+
+        if (!isset($body->fileName) || !is_string($body->fileName) || $body->fileName === '') {
+            throw new BadRequest('fileName is required.');
+        }
+
+        $fileData = $body->fileData;
+        $fileName = $body->fileName;
+        $fileMime = (isset($body->fileMime) && is_string($body->fileMime) && $body->fileMime !== '')
+            ? $body->fileMime
+            : 'application/pdf';
+
+        // Decode base64 to a temporary file.
+        $decoded = base64_decode($fileData, true);
+
+        if ($decoded === false) {
+            throw new BadRequest('fileData is not valid base64.');
+        }
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'espo_upload_');
+
+        if ($tmpPath === false || file_put_contents($tmpPath, $decoded) === false) {
+            throw new \RuntimeException('Failed to write temporary file.');
+        }
+
         $apiKey = $this->getUserApiKey();
 
-        // Build the multipart fields to forward.
+        // Build the multipart fields to forward to the AI backend.
         $fields = [
             'userApiKey' => $apiKey,
             'userId'     => $this->user->getId(),
@@ -112,21 +143,13 @@ class PostChat implements Action
             $fields['sessionId'] = $body->sessionId;
         }
 
-        // Retrieve the uploaded file from PHP's upload mechanism.
-        $uploadedFiles = $_FILES;
-        $fileKey = 'file';
-
-        if (!isset($uploadedFiles[$fileKey]) || $uploadedFiles[$fileKey]['error'] !== UPLOAD_ERR_OK) {
-            throw new BadRequest('A valid file upload is required.');
-        }
-
-        $filePath = $uploadedFiles[$fileKey]['tmp_name'];
-        $fileName = $uploadedFiles[$fileKey]['name'];
-        $fileMime = $uploadedFiles[$fileKey]['type'] ?: 'application/pdf';
-
         $backendUrl = $this->getBackendUrl() . '/chat/upload';
 
-        $result = $this->postMultipart($backendUrl, $fields, $filePath, $fileName, $fileMime);
+        try {
+            $result = $this->postMultipart($backendUrl, $fields, $tmpPath, $fileName, $fileMime);
+        } finally {
+            @unlink($tmpPath);
+        }
 
         return ResponseComposer::json($result);
     }

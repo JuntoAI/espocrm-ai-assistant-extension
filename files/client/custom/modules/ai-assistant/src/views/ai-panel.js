@@ -513,58 +513,37 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
                 },
 
                 uploadFile: function (file, model, sessionId, callback) {
-                    var formData = new FormData();
-                    formData.append('file', file);
+                    var reader = new FileReader();
 
-                    if (model) {
-                        formData.append('model', model);
-                    }
+                    reader.onload = function (e) {
+                        var base64 = e.target.result;
+                        var base64Data = base64.split(',')[1] || base64;
 
-                    if (sessionId) {
-                        formData.append('sessionId', sessionId);
-                    }
+                        var payload = {
+                            fileData: base64Data,
+                            fileName: file.name,
+                            fileMime: file.type || 'application/pdf',
+                        };
 
-                    var xhr = new XMLHttpRequest();
-                    xhr.open('POST', 'api/v1/AiAssistant/chat/upload', true);
+                        if (model) { payload.model = model; }
+                        if (sessionId) { payload.sessionId = sessionId; }
 
-                    // Send session cookies for same-origin EspoCRM authentication.
-                    xhr.withCredentials = true;
-
-                    // Also set the Espo-Authorization header that EspoCRM uses for API auth.
-                    try {
-                        var espoHeaders = (Espo && Espo.Ajax && Espo.Ajax.headers) ? Espo.Ajax.headers : {};
-                        var espoAuth = espoHeaders['Espo-Authorization'] || espoHeaders['Authorization'];
-                        if (espoAuth) {
-                            xhr.setRequestHeader('Espo-Authorization', espoAuth);
-                        }
-                    } catch (e) {
-                        // ignore
-                    }
-
-                    xhr.onload = function () {
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            try {
-                                var data = JSON.parse(xhr.responseText);
-                                callback(null, data);
-                            } catch (e) {
-                                callback({message: 'Invalid response from server.'});
-                            }
-                        } else {
-                            var msg = 'Failed to upload file.';
-
-                            if (xhr.status === 429) {
-                                msg = "You're sending messages too quickly. Please wait.";
-                            }
-
-                            callback({message: msg});
-                        }
+                        Espo.Ajax.postRequest('AiAssistant/chat/upload', payload)
+                            .then(function (data) { callback(null, data); })
+                            .catch(function (xhr) {
+                                var msg = 'Failed to upload file.';
+                                if (xhr && xhr.status === 429) {
+                                    msg = "You're sending messages too quickly. Please wait.";
+                                }
+                                callback({message: msg});
+                            });
                     };
 
-                    xhr.onerror = function () {
-                        callback({message: 'Network error. Please check your connection.'});
+                    reader.onerror = function () {
+                        callback({message: 'Failed to read file.'});
                     };
 
-                    xhr.send(formData);
+                    reader.readAsDataURL(file);
                 },
             };
         },

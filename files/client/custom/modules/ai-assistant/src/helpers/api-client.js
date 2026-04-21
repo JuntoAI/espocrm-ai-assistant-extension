@@ -2,14 +2,14 @@
  * AI Assistant API Client
  *
  * Handles all communication with the AI Backend via the EspoCRM PHP proxy.
- * Uses Espo.Ajax for standard JSON requests (auth cookies handled automatically)
- * and XMLHttpRequest for multipart file uploads.
+ * Uses Espo.Ajax for all requests so EspoCRM handles authentication
+ * automatically — including file uploads (sent as base64 JSON).
  *
  * Error handling maps HTTP status codes to user-friendly messages:
- *   - 429 → rate limit wait message with retry-after seconds
- *   - 401 → session expired, prompt refresh
- *   - 503 / 0 → AI service unavailable
- *   - other → generic retry message
+ *   - 429 -> rate limit wait message with retry-after seconds
+ *   - 401 -> session expired, prompt refresh
+ *   - 503 / 0 -> AI service unavailable
+ *   - other -> generic retry message
  *
  * Panel state persistence:
  *   - ai-panel-expanded  (boolean string) in sessionStorage
@@ -23,7 +23,7 @@ define('ai-assistant:helpers/api-client', [], function () {
     var STORAGE_KEY_MODEL = 'ai-panel-model';
 
     var CHAT_ENDPOINT = 'AiAssistant/chat';
-    var UPLOAD_ENDPOINT = 'api/v1/AiAssistant/chat/upload';
+    var UPLOAD_ENDPOINT = 'AiAssistant/chat/upload';
 
     /**
      * Map an XHR or error status to a user-facing message.
@@ -51,14 +51,8 @@ define('ai-assistant:helpers/api-client', [], function () {
         return 'Something went wrong. Please try again.';
     }
 
-    // ─── Panel State Persistence ────────────────────────
+    // Panel State Persistence
 
-    /**
-     * Read a value from sessionStorage.
-     *
-     * @param {string} key
-     * @returns {string|null}
-     */
     function readStorage(key) {
         try {
             return sessionStorage.getItem(key);
@@ -67,77 +61,41 @@ define('ai-assistant:helpers/api-client', [], function () {
         }
     }
 
-    /**
-     * Write a value to sessionStorage.
-     *
-     * @param {string} key
-     * @param {string} value
-     */
     function writeStorage(key, value) {
         try {
             sessionStorage.setItem(key, value);
         } catch (e) {
-            // Silently fail — sessionStorage may be unavailable
+            // Silently fail
         }
     }
 
-    // ─── Constructor ────────────────────────────────────
+    // Constructor
 
-    /**
-     * @constructor
-     */
     var ApiClient = function () {};
 
-    // ─── Panel State Methods ────────────────────────────
+    // Panel State Methods
 
-    /**
-     * Persist the panel expanded/collapsed state.
-     *
-     * @param {boolean} expanded
-     */
     ApiClient.prototype.savePanelState = function (expanded) {
         writeStorage(STORAGE_KEY_EXPANDED, expanded ? 'true' : 'false');
     };
 
-    /**
-     * Read the persisted panel state.
-     *
-     * @returns {boolean}  true if expanded, false otherwise
-     */
     ApiClient.prototype.loadPanelState = function () {
         return readStorage(STORAGE_KEY_EXPANDED) === 'true';
     };
 
-    /**
-     * Persist the selected model identifier.
-     *
-     * @param {string} model
-     */
     ApiClient.prototype.saveSelectedModel = function (model) {
         writeStorage(STORAGE_KEY_MODEL, model);
     };
 
-    /**
-     * Read the persisted model identifier.
-     *
-     * @returns {string|null}
-     */
     ApiClient.prototype.loadSelectedModel = function () {
         return readStorage(STORAGE_KEY_MODEL);
     };
 
-    // ─── Chat API ───────────────────────────────────────
+    // Chat API
 
     /**
      * Send a text message to the AI Backend.
-     *
-     * Uses Espo.Ajax.postRequest which automatically includes
-     * the EspoCRM auth cookie / Espo-Authorization header.
-     *
-     * @param {string}   message    User message text
-     * @param {string}   model      Selected Gemini model identifier
-     * @param {string|null} sessionId  Conversation session ID (null for new)
-     * @param {Function} callback   function(err, data)
+     * Uses Espo.Ajax.postRequest which handles EspoCRM auth automatically.
      */
     ApiClient.prototype.sendMessage = function (message, model, sessionId, callback) {
         var payload = {message: message};
@@ -163,82 +121,63 @@ define('ai-assistant:helpers/api-client', [], function () {
             });
     };
 
-    // ─── File Upload ────────────────────────────────────
+    // File Upload
 
     /**
-     * Upload a file (PDF) to the AI Backend as multipart form data.
+     * Upload a file (PDF) to the AI Backend.
      *
-     * Uses XMLHttpRequest directly because Espo.Ajax does not
-     * support multipart/form-data payloads.
+     * Reads the file as base64 and sends it via Espo.Ajax.postRequest
+     * so that EspoCRM handles authentication automatically — the same
+     * way the regular chat endpoint works. The PHP proxy decodes the
+     * base64 and forwards the file to the AI backend.
      *
-     * @param {File}     file       File object from input element
-     * @param {string}   model      Selected Gemini model identifier
+     * @param {File}        file       File object from input element
+     * @param {string}      model      Selected Gemini model identifier
      * @param {string|null} sessionId  Conversation session ID
-     * @param {Function} callback   function(err, data)
+     * @param {Function}    callback   function(err, data)
      */
     ApiClient.prototype.uploadFile = function (file, model, sessionId, callback) {
-        var formData = new FormData();
-        formData.append('file', file);
+        var reader = new FileReader();
 
-        if (model) {
-            formData.append('model', model);
-        }
+        reader.onload = function (e) {
+            var base64 = e.target.result;
+            // Strip the data URL prefix (e.g. "data:application/pdf;base64,")
+            var base64Data = base64.split(',')[1] || base64;
 
-        if (sessionId) {
-            formData.append('sessionId', sessionId);
-        }
+            var payload = {
+                fileData: base64Data,
+                fileName: file.name,
+                fileMime: file.type || 'application/pdf',
+            };
 
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', UPLOAD_ENDPOINT, true);
-
-        // Send session cookies for same-origin EspoCRM authentication.
-        xhr.withCredentials = true;
-
-        // Also set the Espo-Authorization header that EspoCRM uses for API auth.
-        // Espo.Ajax stores the current auth header in its headers map.
-        try {
-            var espoHeaders = (Espo && Espo.Ajax && Espo.Ajax.headers) ? Espo.Ajax.headers : {};
-            var espoAuth = espoHeaders['Espo-Authorization'] || espoHeaders['Authorization'];
-            if (espoAuth) {
-                xhr.setRequestHeader('Espo-Authorization', espoAuth);
+            if (model) {
+                payload.model = model;
             }
-        } catch (e) {
-            // ignore — withCredentials cookie fallback will handle it
-        }
 
-        xhr.onload = function () {
-            if (xhr.status >= 200 && xhr.status < 300) {
-                try {
-                    var data = JSON.parse(xhr.responseText);
-                    callback(null, data);
-                } catch (e) {
-                    callback({message: 'Invalid response from server.', status: xhr.status});
-                }
-            } else {
-                var responseJSON = null;
-
-                try {
-                    responseJSON = JSON.parse(xhr.responseText);
-                } catch (e) {
-                    // ignore parse failure
-                }
-
-                var msg = mapErrorMessage(xhr.status, responseJSON);
-                callback({message: msg, status: xhr.status});
+            if (sessionId) {
+                payload.sessionId = sessionId;
             }
+
+            Espo.Ajax.postRequest(UPLOAD_ENDPOINT, payload)
+                .then(function (response) {
+                    callback(null, response);
+                })
+                .catch(function (xhr) {
+                    var status = (xhr && xhr.status) || 0;
+                    var responseJSON = (xhr && xhr.responseJSON) || null;
+                    var msg = mapErrorMessage(status, responseJSON);
+                    callback({message: msg, status: status});
+                });
         };
 
-        xhr.onerror = function () {
-            callback({
-                message: mapErrorMessage(0, null),
-                status: 0,
-            });
+        reader.onerror = function () {
+            callback({message: 'Failed to read file.', status: 0});
         };
 
-        xhr.send(formData);
+        reader.readAsDataURL(file);
     };
 
-    // ─── Expose error mapper for testing ────────────────
+    // Expose error mapper for testing
 
     ApiClient.mapErrorMessage = mapErrorMessage;
 
