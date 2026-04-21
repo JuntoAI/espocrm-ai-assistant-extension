@@ -92,7 +92,18 @@ class PostChat implements Action
      */
     public function processUpload(Request $request): Response
     {
+        // Debug: log that we entered processUpload
+        @file_put_contents('/tmp/ai_upload_debug.log',
+            date('Y-m-d H:i:s') . " | processUpload entered\n", FILE_APPEND);
+
         $body = $request->getParsedBody();
+
+        // Debug: log what we received
+        @file_put_contents('/tmp/ai_upload_debug.log',
+            date('Y-m-d H:i:s') . " | hasFileData=" . (isset($body->fileData) ? 'yes(' . strlen($body->fileData) . ')' : 'no')
+            . " | hasFiles=" . (isset($_FILES['file']) ? 'yes' : 'no')
+            . " | FILES=" . json_encode(array_keys($_FILES ?? []))
+            . "\n", FILE_APPEND);
 
         $apiKey = $this->getUserApiKey();
 
