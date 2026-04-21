@@ -253,24 +253,20 @@
             if (state.model) formData.append('model', state.model);
             if (state.sessionId) formData.append('sessionId', state.sessionId);
 
-            var reader = new FileReader();
-            reader.onload = function (e) {
-                var base64 = e.target.result;
-                var base64Data = base64.split(',')[1] || base64;
-                var payload = {
-                    fileData: base64Data,
-                    fileName: file.name,
-                    fileMime: file.type || 'application/pdf',
-                };
-                if (text) payload.message = text;
-                if (state.model) payload.model = state.model;
-                if (state.sessionId) payload.sessionId = state.sessionId;
-                Espo.Ajax.postRequest('AiAssistant/chat/upload', payload)
-                    .then(function (data) { handleResponse(el, data); })
-                    .catch(function () { handleError(el, null); });
-            };
-            reader.onerror = function () { handleError(el, null); };
-            reader.readAsDataURL(file);
+            var formData = new FormData();
+            formData.append('file', file);
+            if (text) formData.append('message', text);
+            if (state.model) formData.append('model', state.model);
+            if (state.sessionId) formData.append('sessionId', state.sessionId);
+
+            fetch('api/v1/AiAssistant/chat/upload', {
+                method: 'POST',
+                credentials: 'include',
+                body: formData,
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) { handleResponse(el, data); })
+            .catch(function () { handleError(el, null); });
         } else {
             // Regular text message
             var payload = { message: text };

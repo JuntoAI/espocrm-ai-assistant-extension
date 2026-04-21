@@ -513,37 +513,28 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
                 },
 
                 uploadFile: function (file, model, sessionId, callback) {
-                    var reader = new FileReader();
+                    var formData = new FormData();
+                    formData.append('file', file);
+                    if (model) { formData.append('model', model); }
+                    if (sessionId) { formData.append('sessionId', sessionId); }
 
-                    reader.onload = function (e) {
-                        var base64 = e.target.result;
-                        var base64Data = base64.split(',')[1] || base64;
-
-                        var payload = {
-                            fileData: base64Data,
-                            fileName: file.name,
-                            fileMime: file.type || 'application/pdf',
-                        };
-
-                        if (model) { payload.model = model; }
-                        if (sessionId) { payload.sessionId = sessionId; }
-
-                        Espo.Ajax.postRequest('AiAssistant/chat/upload', payload)
-                            .then(function (data) { callback(null, data); })
-                            .catch(function (xhr) {
+                    fetch('api/v1/AiAssistant/chat/upload', {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData,
+                    })
+                    .then(function (response) {
+                        return response.json().then(function (data) {
+                            if (response.ok) {
+                                callback(null, data);
+                            } else {
                                 var msg = 'Failed to upload file.';
-                                if (xhr && xhr.status === 429) {
-                                    msg = "You're sending messages too quickly. Please wait.";
-                                }
+                                if (response.status === 429) { msg = "You're sending messages too quickly. Please wait."; }
                                 callback({message: msg});
-                            });
-                    };
-
-                    reader.onerror = function () {
-                        callback({message: 'Failed to read file.'});
-                    };
-
-                    reader.readAsDataURL(file);
+                            }
+                        });
+                    })
+                    .catch(function () { callback({message: 'Network error. Please check your connection.'}); });
                 },
             };
         },

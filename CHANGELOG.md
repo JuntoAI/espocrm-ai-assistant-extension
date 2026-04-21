@@ -4,6 +4,11 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.1.5] - 2026-04-21
+
+### Fixed
+- PDF upload silently failing: `getUserApiKey()` Strategy 2 was finding the MCP API user and returning its key instead of the logged-in user's session token. The ai-backend then rejected the request with 500 "no permission". Removed Strategy 2 entirely — the correct key for browser users is always the session AuthToken (Strategy 3).
+
 ## [1.1.4] - 2026-04-21
 
 ### Fixed

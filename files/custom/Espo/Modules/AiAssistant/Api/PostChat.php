@@ -84,43 +84,15 @@ class PostChat implements Action
     /**
      * Handle POST /api/v1/AiAssistant/chat/upload
      *
-     * Accepts a JSON body with base64-encoded file data and forwards
-     * it to the AI Backend's /chat/upload endpoint as multipart.
+     * Receives a multipart file upload from the browser and forwards
+     * it to the AI Backend's /chat/upload endpoint.
      *
-     * Using JSON + base64 instead of multipart allows Espo.Ajax to
-     * handle authentication automatically on the frontend.
+     * EspoCRM authenticates the user before this action runs, so the
+     * PHP proxy can safely add the user's API key to the forwarded request.
      */
     public function processUpload(Request $request): Response
     {
         $body = $request->getParsedBody();
-
-        // Validate base64 file data.
-        if (!isset($body->fileData) || !is_string($body->fileData) || $body->fileData === '') {
-            throw new BadRequest('fileData is required (base64-encoded file content).');
-        }
-
-        if (!isset($body->fileName) || !is_string($body->fileName) || $body->fileName === '') {
-            throw new BadRequest('fileName is required.');
-        }
-
-        $fileData = $body->fileData;
-        $fileName = $body->fileName;
-        $fileMime = (isset($body->fileMime) && is_string($body->fileMime) && $body->fileMime !== '')
-            ? $body->fileMime
-            : 'application/pdf';
-
-        // Decode base64 to a temporary file.
-        $decoded = base64_decode($fileData, true);
-
-        if ($decoded === false) {
-            throw new BadRequest('fileData is not valid base64.');
-        }
-
-        $tmpPath = tempnam(sys_get_temp_dir(), 'espo_upload_');
-
-        if ($tmpPath === false || file_put_contents($tmpPath, $decoded) === false) {
-            throw new \RuntimeException('Failed to write temporary file.');
-        }
 
         $apiKey = $this->getUserApiKey();
 
@@ -143,13 +115,20 @@ class PostChat implements Action
             $fields['sessionId'] = $body->sessionId;
         }
 
+        // Retrieve the uploaded file from PHP's $_FILES superglobal.
+        $fileKey = 'file';
+
+        if (!isset($_FILES[$fileKey]) || $_FILES[$fileKey]['error'] !== UPLOAD_ERR_OK) {
+            throw new BadRequest('A valid file upload is required.');
+        }
+
+        $filePath = $_FILES[$fileKey]['tmp_name'];
+        $fileName = $_FILES[$fileKey]['name'];
+        $fileMime = $_FILES[$fileKey]['type'] ?: 'application/pdf';
+
         $backendUrl = $this->getBackendUrl() . '/chat/upload';
 
-        try {
-            $result = $this->postMultipart($backendUrl, $fields, $tmpPath, $fileName, $fileMime);
-        } finally {
-            @unlink($tmpPath);
-        }
+        $result = $this->postMultipart($backendUrl, $fields, $filePath, $fileName, $fileMime);
 
         return ResponseComposer::json($result);
     }
@@ -182,25 +161,8 @@ class PostChat implements Action
             }
         }
 
-        // Strategy 2: Look for a dedicated API user (type = 'api') in the User entity.
-        $apiUser = $this->entityManager
-            ->getRDBRepository('User')
-            ->where([
-                'type' => 'api',
-                'isActive' => true,
-            ])
-            ->order('createdAt', 'DESC')
-            ->findOne();
-
-        if ($apiUser !== null) {
-            $apiKey = $apiUser->get('apiKey');
-
-            if (is_string($apiKey) && $apiKey !== '') {
-                return $apiKey;
-            }
-        }
-
-        // Strategy 3: Fall back to the user's active AuthToken (session token).
+        // Strategy 2: Fall back to the user's active AuthToken (session token).
+        // This is the standard case for browser-based users logged in via OIDC or password.
         $authToken = $this->entityManager
             ->getRDBRepository('AuthToken')
             ->where([
