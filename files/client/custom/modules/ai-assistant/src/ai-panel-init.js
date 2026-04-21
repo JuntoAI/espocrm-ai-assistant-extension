@@ -243,26 +243,46 @@
         el.querySelector('[data-file-input]').value = '';
 
         if (file) {
-            // Upload file as base64 via Espo.Ajax (handles auth automatically)
-            var reader = new FileReader();
-            reader.onload = function (e) {
-                var base64 = e.target.result;
-                var base64Data = base64.split(',')[1] || base64;
-                var payload = {
-                    fileData: base64Data,
-                    fileName: file.name,
-                    fileMime: file.type || 'application/pdf',
-                };
-                if (text) payload.message = text;
-                if (state.model) payload.model = state.model;
-                if (state.sessionId) payload.sessionId = state.sessionId;
+            // Upload file as multipart via XHR with EspoCRM auth cookie
+            var formData = new FormData();
+            formData.append('file', file);
+            if (text) formData.append('message', text);
+            if (state.model) formData.append('model', state.model);
+            if (state.sessionId) formData.append('sessionId', state.sessionId);
 
-                Espo.Ajax.postRequest('AiAssistant/upload', payload)
-                    .then(function (data) { handleResponse(el, data); })
-                    .catch(function () { handleError(el, null); });
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', window.location.origin + '/api/v1/AiAssistant/upload', true);
+
+            // Copy the auth cookie — EspoCRM uses cookie-based auth for same-origin
+            // The cookie is sent automatically by the browser for same-origin XHR
+            xhr.withCredentials = true;
+
+            // Also try to get the Espo-Authorization header from the base URL
+            // EspoCRM stores auth in a cookie named 'auth-token-secret' or similar
+            try {
+                // Espo.Ajax uses jQuery.ajax internally which reads from $.ajaxSetup
+                var jqSettings = (typeof $ !== 'undefined' && $.ajaxSetup) ? $.ajaxSetup() : {};
+                if (jqSettings.headers) {
+                    for (var key in jqSettings.headers) {
+                        xhr.setRequestHeader(key, jqSettings.headers[key]);
+                    }
+                }
+            } catch (e) {}
+
+            xhr.onload = function () {
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        handleResponse(el, data);
+                    } else {
+                        handleError(el, xhr);
+                    }
+                } catch (e) {
+                    handleError(el, null);
+                }
             };
-            reader.onerror = function () { handleError(el, null); };
-            reader.readAsDataURL(file);
+            xhr.onerror = function () { handleError(el, null); };
+            xhr.send(formData);
         } else {
             // Regular text message
             var payload = { message: text };
