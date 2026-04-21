@@ -122,7 +122,7 @@ class PostChat implements Action
             // Multipart upload (from XHR/fetch with FormData).
             $filePath = $_FILES[$fileKey]['tmp_name'];
             $fileName = $_FILES[$fileKey]['name'];
-            $fileMime = $_FILES[$fileKey]['type'] ?: 'application/pdf';
+            $fileMime = $_FILES[$fileKey]['type'] ?: 'application/octet-stream';
         } elseif (isset($body->fileData) && is_string($body->fileData) && $body->fileData !== '') {
             // Base64 JSON upload (from Espo.Ajax.postRequest).
             $decoded = base64_decode($body->fileData, true);

@@ -117,9 +117,9 @@
                     '<div class="ai-panel-input-row">' +
                         '<textarea class="ai-panel-textarea" data-input placeholder="Type a message... (Shift+Enter for new line)" rows="3"></textarea>' +
                         '<div class="ai-panel-input-buttons">' +
-                            '<label class="ai-panel-btn ai-panel-btn-upload" title="Upload PDF">' +
+                            '<label class="ai-panel-btn ai-panel-btn-upload" title="Upload File">' +
                                 '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"></path></svg>' +
-                                '<input type="file" data-file-input accept=".pdf,application/pdf" style="display:none">' +
+                                '<input type="file" data-file-input accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.html,application/pdf,image/*,text/*" style="display:none">' +
                             '</label>' +
                             '<button class="ai-panel-btn ai-panel-btn-send" data-action="send">&#9654;</button>' +
                         '</div>' +
@@ -178,7 +178,7 @@
         el.querySelector('[data-file-input]').addEventListener('change', function () {
             var file = this.files && this.files[0];
             if (!file) return;
-            if (file.type !== 'application/pdf') {
+            if (!file.type.match(/^(application\/pdf|image\/(png|jpeg|gif|webp)|text\/(plain|csv|html))$/)) {
                 addMessage('error', 'Only PDF files are supported.');
                 renderMessages(el);
                 this.value = '';

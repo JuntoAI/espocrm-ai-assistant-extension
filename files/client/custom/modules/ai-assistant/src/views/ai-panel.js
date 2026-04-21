@@ -133,7 +133,7 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
                         // Input area
                         '<div class="ai-panel-input-area">' +
                             '<div class="ai-panel-input-row">' +
-                                '<button class="ai-panel-btn ai-panel-btn-upload" data-action="uploadFile" title="Upload PDF" aria-label="Upload PDF file">' +
+                                '<button class="ai-panel-btn ai-panel-btn-upload" data-action="uploadFile" title="Upload File" aria-label="Upload File file">' +
                                     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
                                         '<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>' +
                                     '</svg>' +
@@ -149,7 +149,7 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
                         '</div>' +
 
                         // Hidden file input
-                        '<input type="file" class="ai-panel-file-input" data-file-input accept=".pdf,application/pdf" style="display:none;" aria-hidden="true">' +
+                        '<input type="file" class="ai-panel-file-input" data-file-input accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv,.html,application/pdf,image/*,text/*" style="display:none;" aria-hidden="true">' +
 
                     '</div>' +
                 '</div>';
@@ -422,8 +422,8 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
 
         _handleFileUpload: function (file) {
             // Validate client-side before sending
-            if (file.type !== 'application/pdf') {
-                this._addMessage('assistant', 'Please upload a PDF file.', true);
+            if (!file.type.match(/^(application\/pdf|image\/(png|jpeg|gif|webp)|text\/(plain|csv|html))$/)) {
+                this._addMessage('assistant', 'Please upload a supported file (PDF, image, or text).', true);
                 return;
             }
 
