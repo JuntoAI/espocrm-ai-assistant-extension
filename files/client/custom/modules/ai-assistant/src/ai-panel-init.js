@@ -16,9 +16,6 @@
     // ── Loading status messages ─────────────────────────
     var LOADING_STAGES = [
         { text: 'Thinking...', delay: 0 },
-        { text: 'Querying CRM...', delay: 3000 },
-        { text: 'Fetching data...', delay: 8000 },
-        { text: 'Processing results...', delay: 15000 },
     ];
 
     // ── Tool name → friendly label ──────────────────────

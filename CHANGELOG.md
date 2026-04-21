@@ -4,6 +4,14 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.1.7] - 2026-04-21
+
+### Changed
+- Loading indicator now shows only "Thinking..." instead of fake staged messages ("Querying CRM...", "Fetching data...", "Processing results..."). CRM tool usage is shown accurately via tool badges on the response after it arrives.
+
+### Fixed
+- PDF upload permission denied on server — fixed /tmp/uploads directory permissions on the GCE instance
+
 ## [1.1.6] - 2026-04-21
 
 ### Fixed
