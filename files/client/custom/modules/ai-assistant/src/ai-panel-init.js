@@ -292,13 +292,7 @@
                     try {
                         var data = JSON.parse(xhr.responseText);
                         if (data.sessionId) state.sessionId = data.sessionId;
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            // Show upload confirmation as assistant message
-                            if (data.message) {
-                                addMessage('assistant', data.message);
-                                renderMessages(el);
-                            }
-                        }
+                        // Don't show upload confirmation — just proceed silently
                     } catch (e) {}
                     uploadIdx++;
                     uploadNext();
