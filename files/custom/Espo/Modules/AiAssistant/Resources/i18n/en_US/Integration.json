@@ -1,0 +1,13 @@
+{
+    "labels": {
+        "AiAssistant": "AI Assistant"
+    },
+    "fields": {
+        "backendUrl": "AI Backend URL",
+        "apiUserName": "API User Name"
+    },
+    "tooltips": {
+        "backendUrl": "URL of the AI Backend service. Default: http://ai-backend:3001 (Docker internal network). Change this if your backend runs elsewhere.",
+        "apiUserName": "The EspoCRM API user (type = 'api') whose API key is used to execute CRM operations on behalf of browser users. This user's permissions determine what the AI Assistant can access. Default: mcp-integration"
+    }
+}

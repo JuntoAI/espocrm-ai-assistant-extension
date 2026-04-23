@@ -10,6 +10,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 - Backend architecture: removed CRMExecutor duplicate REST layer, all CRM tool calls now route through MCP server via stdio bridge with per-user API key override. Single source of truth for PATCH/PUT, field unwrapping, validation.
 - Fixes silent update failures (e.g. billing address not persisting on Silicon Gardens) caused by the old CRMExecutor sending nested `data` wrapper and using PUT instead of PATCH.
 
+## [1.5.0] - 2026-04-23
+
+### Added
+- Administration > Integrations > AI Assistant config panel with two fields:
+  - **AI Backend URL** — where the AI backend service runs (default: `http://ai-backend:3001`)
+  - **API User Name** — which EspoCRM API user to use for CRM operations (default: `mcp-integration`)
+- i18n labels and tooltips for both fields
+
+### Changed
+- `PostChat.php` now reads config from the Integration entity first, with legacy `config.php` fallback for backward compatibility
+
 ## [1.4.4] - 2026-04-23
 
 ### Changed

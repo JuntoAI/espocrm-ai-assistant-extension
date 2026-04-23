@@ -241,10 +241,44 @@ class PostChat implements Action
     }
 
     /**
-     * Get the AI Backend base URL from EspoCRM config or use the default.
+     * Load integration settings from Administration > Integrations > AI Assistant.
+     *
+     * Returns the `data` object from the Integration entity, or null if
+     * the integration has not been configured yet.
+     */
+    private function getIntegrationData(): ?object
+    {
+        $integration = $this->entityManager
+            ->getRDBRepository('Integration')
+            ->where(['id' => 'AiAssistant'])
+            ->findOne();
+
+        if ($integration === null) {
+            return null;
+        }
+
+        return $integration->get('data') ?? null;
+    }
+
+    /**
+     * Get the AI Backend base URL.
+     *
+     * Reads from Administration > Integrations > AI Assistant (backendUrl).
+     * Falls back to config.php 'aiAssistantBackendUrl', then the default constant.
      */
     private function getBackendUrl(): string
     {
+        $data = $this->getIntegrationData();
+
+        if ($data !== null) {
+            $url = $data->backendUrl ?? null;
+
+            if (is_string($url) && $url !== '') {
+                return rtrim($url, '/');
+            }
+        }
+
+        // Legacy fallback: config.php
         $url = $this->config->get('aiAssistantBackendUrl');
 
         if (is_string($url) && $url !== '') {
@@ -257,13 +291,22 @@ class PostChat implements Action
     /**
      * Get the API user name used to proxy requests for browser/OIDC users.
      *
-     * Configurable in EspoCRM config.php:
-     *   'aiAssistantApiUserName' => 'my-api-user'
-     *
-     * Defaults to 'mcp-integration'.
+     * Reads from Administration > Integrations > AI Assistant (apiUserName).
+     * Falls back to config.php 'aiAssistantApiUserName', then the default constant.
      */
     private function getApiUserName(): string
     {
+        $data = $this->getIntegrationData();
+
+        if ($data !== null) {
+            $name = $data->apiUserName ?? null;
+
+            if (is_string($name) && $name !== '') {
+                return $name;
+            }
+        }
+
+        // Legacy fallback: config.php
         $name = $this->config->get('aiAssistantApiUserName');
 
         if (is_string($name) && $name !== '') {

@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "backendUrl": {
+            "type": "varchar",
+            "required": true,
+            "default": "http://ai-backend:3001"
+        },
+        "apiUserName": {
+            "type": "varchar",
+            "required": true,
+            "default": "mcp-integration"
+        }
+    },
+    "params": ["backendUrl", "apiUserName"],
+    "allowUserAccess": false,
+    "view": "views/admin/integrations/edit"
+}
