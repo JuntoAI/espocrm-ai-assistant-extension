@@ -4,6 +4,22 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] - 2026-04-23
+
+### Changed
+- Backend architecture: removed CRMExecutor duplicate REST layer, all CRM tool calls now route through MCP server via stdio bridge with per-user API key override. Single source of truth for PATCH/PUT, field unwrapping, validation.
+- Fixes silent update failures (e.g. billing address not persisting on Silicon Gardens) caused by the old CRMExecutor sending nested `data` wrapper and using PUT instead of PATCH.
+
+## [1.4.4] - 2026-04-23
+
+### Changed
+- API user name for proxying browser/OIDC requests is now configurable via EspoCRM config (`aiAssistantApiUserName`), defaults to `mcp-integration`. No longer hardcoded.
+
+## [1.4.3] - 2026-04-23
+
+### Fixed
+- AI Assistant actions (create account, etc.) were attributed to `juntoai_ghl` instead of the correct API user. Strategy 2 in `getUserApiKey()` was grabbing any active API user — now explicitly targets the `mcp-integration` API user by userName.
+
 ## [1.1.8] - 2026-04-21
 
 ### Fixed
