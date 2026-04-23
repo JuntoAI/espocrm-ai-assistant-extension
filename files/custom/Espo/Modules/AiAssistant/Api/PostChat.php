@@ -28,6 +28,9 @@ class PostChat implements Action
     /** Default AI Backend URL (Docker internal network). */
     private const DEFAULT_BACKEND_URL = 'http://ai-backend:3001';
 
+    /** Default API user name used to proxy requests for browser/OIDC users. */
+    private const DEFAULT_API_USER_NAME = 'mcp-integration';
+
     /** cURL timeout for AI Backend requests in seconds. */
     private const REQUEST_TIMEOUT = 65;
 
@@ -169,8 +172,9 @@ class PostChat implements Action
      *
      * Strategy 1: If the user is an API user (type = 'api'), look up
      *             their authToken from the User entity's apiKey field.
-     * Strategy 2: Look for a dedicated API user linked to this user
-     *             (a User entity with type = 'api' and the same userName).
+     * Strategy 2: Look for the configured API user (aiAssistantApiUserName
+     *             config, defaults to 'mcp-integration') to proxy requests
+     *             on behalf of browser/OIDC users.
      * Strategy 3: Fall back to the user's active AuthToken (session token).
      *
      * @throws Error If no API key can be found for the user.
@@ -190,16 +194,18 @@ class PostChat implements Action
             }
         }
 
-        // Strategy 2: Look for a dedicated API user (type = 'api') in the User entity.
-        // This is needed because browser users authenticated via OIDC may not have
-        // a session token that works with the X-Api-Key header on the AI backend.
+        // Strategy 2: Look for the configured API user to proxy requests
+        // on behalf of browser/OIDC users. Configurable via EspoCRM config:
+        //   'aiAssistantApiUserName' => 'mcp-integration'  (default)
+        $apiUserName = $this->getApiUserName();
+
         $apiUser = $this->entityManager
             ->getRDBRepository('User')
             ->where([
                 'type' => 'api',
+                'userName' => $apiUserName,
                 'isActive' => true,
             ])
-            ->order('createdAt', 'DESC')
             ->findOne();
 
         if ($apiUser !== null) {
@@ -246,6 +252,25 @@ class PostChat implements Action
         }
 
         return self::DEFAULT_BACKEND_URL;
+    }
+
+    /**
+     * Get the API user name used to proxy requests for browser/OIDC users.
+     *
+     * Configurable in EspoCRM config.php:
+     *   'aiAssistantApiUserName' => 'my-api-user'
+     *
+     * Defaults to 'mcp-integration'.
+     */
+    private function getApiUserName(): string
+    {
+        $name = $this->config->get('aiAssistantApiUserName');
+
+        if (is_string($name) && $name !== '') {
+            return $name;
+        }
+
+        return self::DEFAULT_API_USER_NAME;
     }
 
     /**
