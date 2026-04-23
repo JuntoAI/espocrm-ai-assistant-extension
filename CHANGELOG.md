@@ -4,6 +4,11 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.5.1] - 2026-04-23
+
+### Fixed
+- PHP proxy cURL timeout increased from 65s to 130s to support PDF analysis requests that take longer with Gemini.
+
 ## [1.5.0] - 2026-04-23
 
 ### Changed

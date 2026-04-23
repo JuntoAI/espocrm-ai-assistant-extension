@@ -32,7 +32,7 @@ class PostChat implements Action
     private const DEFAULT_API_USER_NAME = 'mcp-integration';
 
     /** cURL timeout for AI Backend requests in seconds. */
-    private const REQUEST_TIMEOUT = 65;
+    private const REQUEST_TIMEOUT = 130;
 
     /** cURL connection timeout in seconds. */
     private const CONNECT_TIMEOUT = 5;
