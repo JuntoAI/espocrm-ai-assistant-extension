@@ -4,6 +4,31 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.5.4] - 2026-05-20
+
+### Changed
+- Model dropdown is now **dynamic** — fetches available models from the backend at runtime via `GET /api/v1/AiAssistant/models`.
+- No more hardcoded model list in the frontend. To add/remove models, update the `GEMINI_AVAILABLE_MODELS` env var on the backend container and restart.
+
+### Added
+- `GET /api/v1/AiAssistant/models` PHP proxy endpoint that forwards to the AI Backend's `GET /models`.
+- `GET /models` endpoint on the AI Backend returning `{ models: [...], defaultModel: "..." }`.
+- `MODEL_LABELS` lookup in `ai-panel-init.js` for friendly display names of known models.
+
+## [1.5.3] - 2026-05-20
+
+### Fixed
+- Model dropdown in `ai-panel-init.js` (the actual bootstrap script) now shows Gemini 3.5 Flash as default. Previous 1.5.2 only updated the unused `ai-panel.js` view file.
+
+## [1.5.2] - 2026-05-20
+
+### Added
+- Gemini 3.5 Flash model (`gemini-3.5-flash`) — Google's latest and fastest frontier model, now the default.
+
+### Changed
+- Default model switched from `gemini-3.1-flash-lite-preview` to `gemini-3.5-flash`.
+- Model selector relabeled: "Gemini Pro" → "Gemini Pro", "Gemini Flash" → "Gemini Flash Lite", new "Gemini 3.5 Flash" at top.
+
 ## [1.5.1] - 2026-04-23
 
 ### Fixed

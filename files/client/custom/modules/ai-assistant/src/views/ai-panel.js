@@ -17,11 +17,12 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
     var STORAGE_KEY_MODEL = 'ai-panel-model';
 
     var MODELS = [
+        {value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash'},
         {value: 'gemini-3.1-pro-preview', label: 'Gemini Pro'},
-        {value: 'gemini-3.1-flash-lite-preview', label: 'Gemini Flash'},
+        {value: 'gemini-3.1-flash-lite-preview', label: 'Gemini Flash Lite'},
     ];
 
-    var DEFAULT_MODEL = 'gemini-3.1-flash-lite-preview';
+    var DEFAULT_MODEL = 'gemini-3.5-flash';
 
     var PANEL_WIDTH = 400;
     var COLLAPSED_WIDTH = 48;

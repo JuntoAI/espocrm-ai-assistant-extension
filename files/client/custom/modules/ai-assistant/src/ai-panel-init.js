@@ -11,7 +11,58 @@
     var PANEL_ID = 'ai-assistant-panel';
     var STORAGE_EXPANDED = 'ai-panel-expanded';
     var STORAGE_MODEL = 'ai-panel-model';
-    var DEFAULT_MODEL = 'gemini-3-flash-preview';
+    var DEFAULT_MODEL = 'gemini-3.5-flash';
+
+    // Model display labels (model ID → friendly name)
+    var MODEL_LABELS = {
+        'gemini-3.5-flash': 'Gemini 3.5 Flash',
+        'gemini-3.1-pro-preview': 'Gemini 3.1 Pro',
+        'gemini-3.1-flash-lite-preview': 'Gemini 3.1 Flash-Lite',
+        'gemini-3-flash-preview': 'Gemini 3 Flash',
+    };
+
+    // Available models — populated dynamically from backend
+    var availableModels = [DEFAULT_MODEL];
+
+    /** Build <option> tags from the current availableModels list. */
+    function buildModelOptions() {
+        var html = '';
+        for (var i = 0; i < availableModels.length; i++) {
+            var m = availableModels[i];
+            var label = MODEL_LABELS[m] || m;
+            var selected = m === state.model ? ' selected' : '';
+            html += '<option value="' + m + '"' + selected + '>' + label + '</option>';
+        }
+        return html;
+    }
+
+    /** Fetch available models from backend and update the dropdown. */
+    function fetchModels() {
+        var url = window.location.origin + '/api/v1/AiAssistant/models';
+
+        fetch(url, { credentials: 'include' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.models && data.models.length > 0) {
+                    availableModels = data.models;
+                }
+                if (data.defaultModel) {
+                    DEFAULT_MODEL = data.defaultModel;
+                    // If user hasn't explicitly chosen a model, use the backend default
+                    if (!sessionStorage.getItem(STORAGE_MODEL)) {
+                        state.model = DEFAULT_MODEL;
+                    }
+                }
+                // Update the dropdown if it exists
+                var select = document.querySelector('#' + PANEL_ID + ' [data-model]');
+                if (select) {
+                    select.innerHTML = buildModelOptions();
+                }
+            })
+            .catch(function () {
+                // Silently fail — dropdown keeps its initial state
+            });
+    }
 
     // ── Loading status messages ─────────────────────────
     var LOADING_STAGES = [
@@ -85,6 +136,7 @@
         document.body.appendChild(el);
         bind(el);
         applyState(el);
+        fetchModels();
     }
 
     function getHTML() {
@@ -98,9 +150,7 @@
                     '<span class="ai-panel-title">AI Assistant</span>' +
                     '<div class="ai-panel-header-controls">' +
                         '<select class="ai-panel-model-select" data-model>' +
-                            '<option value="gemini-3-flash-preview"' + (state.model === 'gemini-3-flash-preview' ? ' selected' : '') + '>Gemini 3 Flash</option>' +
-                            '<option value="gemini-3.1-flash-lite-preview"' + (state.model === 'gemini-3.1-flash-lite-preview' ? ' selected' : '') + '>Gemini 3.1 Flash-Lite</option>' +
-                            '<option value="gemini-3.1-pro-preview"' + (state.model === 'gemini-3.1-pro-preview' ? ' selected' : '') + '>Gemini 3.1 Pro</option>' +
+                            buildModelOptions() +
                         '</select>' +
                         '<button class="ai-panel-btn" data-action="newChat" title="New Conversation">&#8634;</button>' +
                         '<button class="ai-panel-btn ai-panel-btn-close" data-action="close" title="Close">&times;</button>' +

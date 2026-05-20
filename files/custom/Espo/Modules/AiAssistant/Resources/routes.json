@@ -1,5 +1,10 @@
 [
     {
+        "route": "/AiAssistant/models",
+        "method": "get",
+        "actionClassName": "Espo\\Modules\\AiAssistant\\Api\\GetModels"
+    },
+    {
         "route": "/AiAssistant/upload",
         "method": "post",
         "actionClassName": "Espo\\Modules\\AiAssistant\\Api\\PostUpload"
