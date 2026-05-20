@@ -115,6 +115,9 @@
         sessionId: null,
         loadingTimers: [],
         pendingFiles: [],
+        promptHistory: JSON.parse(sessionStorage.getItem('ai-panel-prompt-history') || '[]'),
+        historyIndex: -1,
+        historyDraft: '',
     };
 
     // ── Wait for page ready ─────────────────────────────
@@ -213,6 +216,35 @@
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage(el);
+            } else if (e.key === 'ArrowUp' && !e.shiftKey) {
+                // Only navigate history when cursor is at the start or input is empty
+                var input = el.querySelector('[data-input]');
+                if (input.selectionStart === 0 || input.value.trim() === '') {
+                    e.preventDefault();
+                    if (state.promptHistory.length === 0) return;
+                    if (state.historyIndex === -1) {
+                        state.historyDraft = input.value;
+                        state.historyIndex = state.promptHistory.length - 1;
+                    } else if (state.historyIndex > 0) {
+                        state.historyIndex--;
+                    }
+                    input.value = state.promptHistory[state.historyIndex];
+                    input.style.height = 'auto';
+                    input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+                }
+            } else if (e.key === 'ArrowDown' && !e.shiftKey) {
+                var input = el.querySelector('[data-input]');
+                if (state.historyIndex === -1) return;
+                e.preventDefault();
+                if (state.historyIndex < state.promptHistory.length - 1) {
+                    state.historyIndex++;
+                    input.value = state.promptHistory[state.historyIndex];
+                } else {
+                    state.historyIndex = -1;
+                    input.value = state.historyDraft;
+                }
+                input.style.height = 'auto';
+                input.style.height = Math.min(input.scrollHeight, 150) + 'px';
             }
         });
 
@@ -275,6 +307,21 @@
         var text = (input.value || '').trim();
         var files = state.pendingFiles.slice();
         if ((!text && !files.length) || state.loading) return;
+
+        // Save to prompt history
+        if (text) {
+            // Avoid duplicating the last entry
+            if (state.promptHistory.length === 0 || state.promptHistory[state.promptHistory.length - 1] !== text) {
+                state.promptHistory.push(text);
+                // Keep max 50 entries
+                if (state.promptHistory.length > 50) {
+                    state.promptHistory.shift();
+                }
+                try { sessionStorage.setItem('ai-panel-prompt-history', JSON.stringify(state.promptHistory)); } catch (e) {}
+            }
+            state.historyIndex = -1;
+            state.historyDraft = '';
+        }
 
         input.value = '';
         input.style.height = 'auto';

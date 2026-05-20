@@ -4,6 +4,11 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.5.5] - 2026-05-20
+
+### Added
+- Prompt history navigation with Arrow Up/Down keys — cycle through previously sent messages, persisted in sessionStorage (max 50 entries).
+
 ## [1.5.4] - 2026-05-20
 
 ### Changed
