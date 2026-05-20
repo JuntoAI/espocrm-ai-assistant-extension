@@ -13,5 +13,10 @@
         "route": "/AiAssistant/chat",
         "method": "post",
         "actionClassName": "Espo\\Modules\\AiAssistant\\Api\\PostChat"
+    },
+    {
+        "route": "/AiAssistant/brief",
+        "method": "post",
+        "actionClassName": "Espo\\Modules\\AiAssistant\\Api\\PostBrief"
     }
 ]

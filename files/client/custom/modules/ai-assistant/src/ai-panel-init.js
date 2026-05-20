@@ -11,7 +11,12 @@
     var PANEL_ID = 'ai-assistant-panel';
     var STORAGE_EXPANDED = 'ai-panel-expanded';
     var STORAGE_MODEL = 'ai-panel-model';
+    var STORAGE_WIDTH = 'ai-panel-width';
+    var STORAGE_WIDE = 'ai-panel-wide';
     var DEFAULT_MODEL = 'gemini-3.5-flash';
+    var MIN_PANEL_WIDTH = 350;
+    var MAX_PANEL_WIDTH_RATIO = 0.7; // 70% of viewport
+    var WIDE_PANEL_WIDTH_RATIO = 0.5; // 50% of viewport for expand toggle
 
     // Model display labels (model ID → friendly name)
     var MODEL_LABELS = {
@@ -20,6 +25,170 @@
         'gemini-3.1-flash-lite-preview': 'Gemini 3.1 Flash-Lite',
         'gemini-3-flash-preview': 'Gemini 3 Flash',
     };
+
+    // ── Brief caching ───────────────────────────────────
+    var _aiBriefCache = null; // { brief: {...}, cachedAt: Date.now() }
+    var BRIEF_TTL_MS = 3600000; // 1 hour
+
+    /**
+     * Return cached brief if valid (within TTL), otherwise null.
+     */
+    function getCachedBrief() {
+        if (!_aiBriefCache) return null;
+        if (Date.now() - _aiBriefCache.cachedAt >= BRIEF_TTL_MS) {
+            _aiBriefCache = null;
+            return null;
+        }
+        return _aiBriefCache.brief;
+    }
+
+    /**
+     * Fetch the daily brief from the backend with a 10-second timeout.
+     * Returns the brief object on success, or null on error/timeout.
+     * Non-blocking — does not throw.
+     */
+    function fetchBrief() {
+        var cached = getCachedBrief();
+        if (cached) return Promise.resolve(cached);
+
+        var url = window.location.origin + '/api/v1/AiAssistant/brief';
+        var controller = new AbortController();
+        var timeoutId = setTimeout(function () { controller.abort(); }, 10000);
+
+        return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            signal: controller.signal,
+        })
+        .then(function (response) {
+            clearTimeout(timeoutId);
+            if (!response.ok) return null;
+            return response.json();
+        })
+        .then(function (brief) {
+            if (brief) {
+                _aiBriefCache = { brief: brief, cachedAt: Date.now() };
+            }
+            return brief;
+        })
+        .catch(function () {
+            clearTimeout(timeoutId);
+            // Timeout or network error — don't block chat
+            return null;
+        });
+    }
+
+    /**
+     * Show a loading indicator in the brief card area while fetching.
+     */
+    function showBriefLoading(el) {
+        var container = el.querySelector('[data-messages]');
+        if (!container) return;
+        // Remove any existing loading indicator
+        var existing = container.querySelector('.ai-brief-loading');
+        if (existing) existing.remove();
+
+        var loader = document.createElement('div');
+        loader.className = 'ai-brief-loading';
+        loader.innerHTML = '<span class="ai-brief-loading-spinner"></span> Loading daily brief...';
+        container.insertBefore(loader, container.firstChild);
+    }
+
+    /**
+     * Remove the brief loading indicator.
+     */
+    function hideBriefLoading(el) {
+        var container = el.querySelector('[data-messages]');
+        if (!container) return;
+        var loader = container.querySelector('.ai-brief-loading');
+        if (loader) loader.remove();
+    }
+
+    /**
+     * Render the daily brief card in the messages area.
+     * Displays a collapsible card with action recommendations and clickable command chips.
+     */
+    function renderBriefCard(el, brief) {
+        var container = el.querySelector('[data-messages]');
+        if (!container) return;
+
+        // Remove loading indicator if still present
+        hideBriefLoading(el);
+
+        // Remove existing brief card to prevent duplicates
+        var existing = container.querySelector('.ai-brief-card');
+        if (existing) existing.remove();
+
+        // Build recommendations HTML
+        var recommendations = brief.recommendations || [];
+        if (!recommendations.length) return;
+
+        var actionsHtml = '';
+        for (var i = 0; i < recommendations.length; i++) {
+            var rec = recommendations[i];
+            actionsHtml += '<div class="ai-brief-action">';
+            actionsHtml += '<p class="ai-brief-desc">' + escapeHtml(rec.description) + '</p>';
+            actionsHtml += '<p class="ai-brief-reason">' + escapeHtml(rec.reason) + '</p>';
+            if (rec.suggestedCommand) {
+                actionsHtml += '<button class="ai-brief-cmd" data-cmd="' + escapeHtml(rec.suggestedCommand) + '">';
+                actionsHtml += '\uD83D\uDCAC ' + escapeHtml(rec.suggestedCommand);
+                actionsHtml += '</button>';
+            }
+            actionsHtml += '</div>';
+        }
+
+        var cardHtml = '<div class="ai-brief-card" data-collapsed="false">' +
+            '<div class="ai-brief-header">' +
+                '<span class="ai-brief-title">\uD83D\uDCCB Daily Brief</span>' +
+                '<span class="ai-brief-toggle">\u25BC</span>' +
+            '</div>' +
+            '<div class="ai-brief-body">' +
+                actionsHtml +
+            '</div>' +
+        '</div>';
+
+        // Insert at the top of messages area without clearing existing messages
+        var tempDiv = document.createElement('div');
+        tempDiv.innerHTML = cardHtml;
+        var card = tempDiv.firstChild;
+        container.insertBefore(card, container.firstChild);
+
+        // Bind collapse/expand toggle on header click
+        var header = card.querySelector('.ai-brief-header');
+        header.addEventListener('click', function () {
+            var isCollapsed = card.getAttribute('data-collapsed') === 'true';
+            var body = card.querySelector('.ai-brief-body');
+            var toggleIcon = card.querySelector('.ai-brief-toggle');
+
+            if (isCollapsed) {
+                card.setAttribute('data-collapsed', 'false');
+                body.style.display = '';
+                toggleIcon.textContent = '\u25BC';
+            } else {
+                card.setAttribute('data-collapsed', 'true');
+                body.style.display = 'none';
+                toggleIcon.textContent = '\u25B6';
+            }
+        });
+
+        // Bind command chip clicks — pre-fill chat input without submitting
+        var cmdButtons = card.querySelectorAll('.ai-brief-cmd');
+        for (var j = 0; j < cmdButtons.length; j++) {
+            cmdButtons[j].addEventListener('click', function () {
+                var cmd = this.getAttribute('data-cmd');
+                if (!cmd) return;
+                var input = el.querySelector('[data-input]');
+                if (input) {
+                    input.value = cmd;
+                    input.focus();
+                    // Auto-resize textarea to fit content
+                    input.style.height = 'auto';
+                    input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+                }
+            });
+        }
+    }
 
     // Available models — populated dynamically from backend
     var availableModels = [DEFAULT_MODEL];
@@ -109,7 +278,10 @@
     // ── State ───────────────────────────────────────────
     var state = {
         expanded: sessionStorage.getItem(STORAGE_EXPANDED) === 'true',
+        minimized: sessionStorage.getItem('ai-panel-minimized') === 'true',
         model: sessionStorage.getItem(STORAGE_MODEL) || DEFAULT_MODEL,
+        wide: sessionStorage.getItem(STORAGE_WIDE) === 'true',
+        customWidth: parseInt(sessionStorage.getItem(STORAGE_WIDTH), 10) || 0,
         loading: false,
         messages: [],
         sessionId: null,
@@ -119,6 +291,38 @@
         historyIndex: -1,
         historyDraft: '',
     };
+
+    // ── Keyboard shortcut (Ctrl+Shift+A) ──────────────────
+    document.addEventListener('keydown', function (e) {
+        if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+            e.preventDefault();
+            var el = document.getElementById(PANEL_ID);
+            if (!el) return;
+
+            if (state.minimized) {
+                // Restore from minimized
+                state.minimized = false;
+                state.expanded = true;
+                sessionStorage.setItem(STORAGE_EXPANDED, 'true');
+                sessionStorage.removeItem('ai-panel-minimized');
+                applyState(el);
+            } else if (state.expanded) {
+                // Minimize (not close) — keeps bubble visible
+                state.expanded = false;
+                state.minimized = true;
+                sessionStorage.setItem(STORAGE_EXPANDED, 'false');
+                sessionStorage.setItem('ai-panel-minimized', 'true');
+                applyState(el);
+            } else {
+                // Expand from collapsed/minimized
+                state.minimized = false;
+                state.expanded = true;
+                sessionStorage.setItem(STORAGE_EXPANDED, 'true');
+                sessionStorage.removeItem('ai-panel-minimized');
+                applyState(el);
+            }
+        }
+    });
 
     // ── Wait for page ready ─────────────────────────────
     function boot() {
@@ -144,18 +348,30 @@
 
     function getHTML() {
         return '<div class="ai-panel is-collapsed" data-ai-panel>' +
-            '<button class="ai-panel-toggle" data-action="toggle" title="AI Assistant">' +
+            '<button class="ai-panel-toggle" data-action="toggle" title="AI Assistant (Ctrl+Shift+A)">' +
                 '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>' +
                 '<span class="ai-panel-toggle-label">AI</span>' +
             '</button>' +
+            // Minimized bubble — shows last message snippet
+            '<div class="ai-panel-mini-bubble" data-mini-bubble style="display:none">' +
+                '<div class="ai-panel-mini-bubble-content" data-mini-text>AI Assistant</div>' +
+                '<button class="ai-panel-mini-bubble-close" data-action="miniClose" title="Close">&times;</button>' +
+            '</div>' +
             '<div class="ai-panel-body" data-body style="display:none">' +
+                '<div class="ai-panel-resize-handle" data-resize-handle></div>' +
                 '<div class="ai-panel-header">' +
                     '<span class="ai-panel-title">AI Assistant</span>' +
                     '<div class="ai-panel-header-controls">' +
                         '<select class="ai-panel-model-select" data-model>' +
                             buildModelOptions() +
                         '</select>' +
+                        '<button class="ai-panel-btn ai-panel-btn-expand" data-action="expand" title="Expand to 50%">' +
+                            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>' +
+                        '</button>' +
                         '<button class="ai-panel-btn" data-action="newChat" title="New Conversation">&#8634;</button>' +
+                        '<button class="ai-panel-btn ai-panel-btn-minimize" data-action="minimize" title="Minimize (Ctrl+Shift+A)">' +
+                            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>' +
+                        '</button>' +
                         '<button class="ai-panel-btn ai-panel-btn-close" data-action="close" title="Close">&times;</button>' +
                     '</div>' +
                 '</div>' +
@@ -187,7 +403,9 @@
     function bind(el) {
         el.querySelector('[data-action="toggle"]').addEventListener('click', function () {
             state.expanded = !state.expanded;
+            state.minimized = false;
             sessionStorage.setItem(STORAGE_EXPANDED, state.expanded);
+            sessionStorage.removeItem('ai-panel-minimized');
             applyState(el);
         });
 
@@ -203,9 +421,88 @@
 
         el.querySelector('[data-action="close"]').addEventListener('click', function () {
             state.expanded = false;
-            sessionStorage.setItem(STORAGE_EXPANDED, state.expanded);
+            state.minimized = false;
+            sessionStorage.setItem(STORAGE_EXPANDED, 'false');
+            sessionStorage.removeItem('ai-panel-minimized');
             applyState(el);
         });
+
+        el.querySelector('[data-action="minimize"]').addEventListener('click', function () {
+            state.expanded = false;
+            state.minimized = true;
+            sessionStorage.setItem(STORAGE_EXPANDED, 'false');
+            sessionStorage.setItem('ai-panel-minimized', 'true');
+            applyState(el);
+        });
+
+        el.querySelector('[data-mini-bubble]').addEventListener('click', function (e) {
+            // Don't expand if clicking the close button inside the bubble
+            if (e.target.closest('[data-action="miniClose"]')) return;
+            state.minimized = false;
+            state.expanded = true;
+            sessionStorage.setItem(STORAGE_EXPANDED, 'true');
+            sessionStorage.removeItem('ai-panel-minimized');
+            applyState(el);
+        });
+
+        el.querySelector('[data-action="miniClose"]').addEventListener('click', function (e) {
+            e.stopPropagation();
+            state.minimized = false;
+            sessionStorage.removeItem('ai-panel-minimized');
+            applyState(el);
+        });
+
+        el.querySelector('[data-action="expand"]').addEventListener('click', function () {
+            state.wide = !state.wide;
+            state.customWidth = 0; // Reset custom drag width when toggling
+            sessionStorage.setItem(STORAGE_WIDE, state.wide);
+            sessionStorage.removeItem(STORAGE_WIDTH);
+            applyPanelWidth(el);
+        });
+
+        // ── Resize handle drag logic ────────────────────────
+        (function () {
+            var handle = el.querySelector('[data-resize-handle]');
+            var panel = el.querySelector('[data-ai-panel]');
+            var dragging = false;
+            var startX = 0;
+            var startWidth = 0;
+
+            handle.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                dragging = true;
+                startX = e.clientX;
+                startWidth = panel.offsetWidth;
+                panel.classList.add('is-resizing');
+                handle.classList.add('is-dragging');
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+
+            function onMouseMove(e) {
+                if (!dragging) return;
+                var delta = startX - e.clientX; // dragging left = wider
+                var newWidth = startWidth + delta;
+                var maxWidth = window.innerWidth * MAX_PANEL_WIDTH_RATIO;
+                newWidth = Math.max(MIN_PANEL_WIDTH, Math.min(newWidth, maxWidth));
+                state.customWidth = newWidth;
+                state.wide = false; // Custom drag overrides the toggle
+                sessionStorage.setItem(STORAGE_WIDE, 'false');
+                document.documentElement.style.setProperty('--ai-panel-width', newWidth + 'px');
+            }
+
+            function onMouseUp() {
+                if (!dragging) return;
+                dragging = false;
+                panel.classList.remove('is-resizing');
+                handle.classList.remove('is-dragging');
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                if (state.customWidth) {
+                    sessionStorage.setItem(STORAGE_WIDTH, state.customWidth);
+                }
+            }
+        })();
 
         el.querySelector('[data-model]').addEventListener('change', function (e) {
             state.model = e.target.value;
@@ -284,21 +581,87 @@
         });
     }
 
+    // ── Panel width calculation ────────────────────────────
+    function applyPanelWidth(el) {
+        var panel = el.querySelector('[data-ai-panel]');
+        var width;
+
+        if (state.customWidth > 0) {
+            width = state.customWidth;
+        } else if (state.wide) {
+            width = Math.max(MIN_PANEL_WIDTH, window.innerWidth * WIDE_PANEL_WIDTH_RATIO);
+        } else {
+            width = 400; // default
+        }
+
+        document.documentElement.style.setProperty('--ai-panel-width', width + 'px');
+
+        if (state.wide) {
+            panel.classList.add('is-wide');
+        } else {
+            panel.classList.remove('is-wide');
+        }
+    }
+
     // ── State application ───────────────────────────────
     function applyState(el) {
         var panel = el.querySelector('[data-ai-panel]');
         var body = el.querySelector('[data-body]');
+        var toggle = el.querySelector('[data-action="toggle"]');
+        var miniBubble = el.querySelector('[data-mini-bubble]');
+
         if (state.expanded) {
-            panel.classList.remove('is-collapsed');
+            panel.classList.remove('is-collapsed', 'is-minimized');
             panel.classList.add('is-expanded');
             body.style.display = '';
+            toggle.style.display = 'none';
+            miniBubble.style.display = 'none';
+            applyPanelWidth(el);
             el.querySelector('[data-input]').focus();
             scrollToBottom(el);
-        } else {
-            panel.classList.add('is-collapsed');
+
+            // Non-blocking brief fetch on panel open
+            showBriefLoading(el);
+            fetchBrief().then(function (brief) {
+                hideBriefLoading(el);
+                if (brief) {
+                    renderBriefCard(el, brief);
+                }
+            });
+        } else if (state.minimized) {
+            panel.classList.add('is-collapsed', 'is-minimized');
             panel.classList.remove('is-expanded');
             body.style.display = 'none';
+            toggle.style.display = 'none';
+            miniBubble.style.display = 'flex';
+            updateMiniBubble(el);
+        } else {
+            panel.classList.add('is-collapsed');
+            panel.classList.remove('is-expanded', 'is-minimized');
+            body.style.display = 'none';
+            toggle.style.display = '';
+            miniBubble.style.display = 'none';
         }
+    }
+
+    /** Update the mini bubble text with the last message snippet. */
+    function updateMiniBubble(el) {
+        var miniText = el.querySelector('[data-mini-text]');
+        if (!miniText) return;
+
+        if (state.messages.length === 0) {
+            miniText.textContent = 'AI Assistant';
+            return;
+        }
+
+        var lastMsg = state.messages[state.messages.length - 1];
+        var text = lastMsg.content || '';
+        // Strip markdown for preview
+        text = text.replace(/\*\*/g, '').replace(/`/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+        if (text.length > 60) {
+            text = text.substring(0, 57) + '...';
+        }
+        miniText.textContent = text || 'AI Assistant';
     }
 
     // ── Messaging ───────────────────────────────────────
@@ -513,8 +876,16 @@
     // ── Rendering ───────────────────────────────────────
     function renderMessages(el) {
         var container = el.querySelector('[data-messages]');
+
+        // Preserve the brief card if it exists (requirement 3.7)
+        var briefCard = container.querySelector('.ai-brief-card');
+        var briefLoading = container.querySelector('.ai-brief-loading');
+
         if (!state.messages.length) {
             container.innerHTML = '<div class="ai-panel-welcome"><p>How can I help you with your CRM today?</p></div>';
+            // Re-insert brief card at top if it existed
+            if (briefCard) container.insertBefore(briefCard, container.firstChild);
+            if (briefLoading) container.insertBefore(briefLoading, container.firstChild);
             return;
         }
         var html = '';
@@ -555,6 +926,11 @@
             html += '</div>';
         }
         container.innerHTML = html;
+
+        // Re-insert brief card at top after re-render (requirement 3.7)
+        if (briefCard) container.insertBefore(briefCard, container.firstChild);
+        if (briefLoading) container.insertBefore(briefLoading, container.firstChild);
+
         scrollToBottom(el);
 
         // Bind CRM link click handlers for SPA navigation

@@ -4,6 +4,34 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.8.0] - 2026-07-15
+
+### Added
+- **Proactive Daily Brief** — on panel open, automatically fetches and displays a collapsible card with 3-5 prioritized action recommendations based on CRM state analysis (overdue opportunities, stalled accounts, overdue tasks).
+- **Brief card UI** — distinct blue-accented card (#f0f7ff background, #2196F3 left border) with collapsible body, loading indicator, and clickable command chips that pre-fill the chat input.
+- **Client-side brief cache** — in-memory cache with 1-hour TTL prevents redundant API calls on repeated panel opens.
+- **Email drafting tool** — new `draft_email` Gemini function declaration allows users to request email drafts via chat. Generates subject + body using contact context from EspoCRM. Never sends email.
+- **PostBrief.php proxy endpoint** — `POST /api/v1/AiAssistant/brief` forwards brief requests to the AI Backend with user authentication.
+- **10-second fetch timeout** — brief fetch uses AbortController; on timeout/error, displays regular chat state without blocking.
+
+### Changed
+- Panel open now triggers non-blocking brief fetch with loading indicator while keeping chat input enabled.
+- Brief card renders above existing conversation history without clearing prior messages.
+
+## [1.7.0] - 2026-05-20
+
+### Added
+- **Keyboard shortcut (Ctrl+Shift+A)** — instantly toggle the AI panel open/closed without losing conversation state. Works from anywhere in the CRM.
+- **Minimize to bubble** — new minimize button (─) in the panel header collapses the panel to a small floating pill showing the last message snippet. Click the bubble to restore. Close (×) on the bubble dismisses it entirely back to the FAB.
+- Minimized state persists in sessionStorage across page navigations.
+
+## [1.6.0] - 2026-05-20
+
+### Added
+- **Resizable panel** — drag the left edge of the panel to resize freely between 350px and 70% of viewport width. Width persists in sessionStorage.
+- **Expand toggle button** — one-click button in the header to toggle between default (400px) and 50% viewport width. Icon rotates to indicate state.
+- Resize handle shows a subtle blue grip indicator on hover.
+
 ## [1.5.6] - 2026-05-20
 
 ### Changed
