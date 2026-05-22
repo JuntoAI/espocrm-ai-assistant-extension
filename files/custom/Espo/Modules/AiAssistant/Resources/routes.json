@@ -18,5 +18,10 @@
         "route": "/AiAssistant/brief",
         "method": "post",
         "actionClassName": "Espo\\Modules\\AiAssistant\\Api\\PostBrief"
+    },
+    {
+        "route": "/AiAssistant/usageStats",
+        "method": "get",
+        "actionClassName": "Espo\\Modules\\AiAssistant\\Api\\GetUsageStats"
     }
 ]

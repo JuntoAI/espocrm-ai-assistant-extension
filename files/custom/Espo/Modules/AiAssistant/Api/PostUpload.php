@@ -18,6 +18,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Utils\Config;
 use Espo\Entities\User;
+use Espo\Modules\AiAssistant\Services\UsageLogger;
 use Espo\ORM\EntityManager;
 
 class PostUpload implements Action
@@ -30,6 +31,7 @@ class PostUpload implements Action
         private User $user,
         private EntityManager $entityManager,
         private Config $config,
+        private UsageLogger $usageLogger,
     ) {}
 
     public function process(Request $request): Response
@@ -87,12 +89,31 @@ class PostUpload implements Action
 
         $backendUrl = $this->getBackendUrl() . '/chat/upload';
 
+        $startTime = hrtime(true);
+
         try {
             $result = $this->postMultipart($backendUrl, $fields, $filePath, $fileName, $fileMime);
         } finally {
             if ($isTemp && isset($filePath) && file_exists($filePath)) {
                 @unlink($filePath);
             }
+        }
+
+        $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+        // Log usage statistics (non-blocking).
+        try {
+            $this->usageLogger->log(
+                userId: $this->user->getId(),
+                userName: $this->user->getName(),
+                endpoint: 'upload',
+                response: $result,
+                durationMs: $durationMs,
+                sessionId: $fields['sessionId'] ?? null,
+                model: $fields['model'] ?? null,
+            );
+        } catch (\Throwable $e) {
+            // Never let logging failures break the upload response.
         }
 
         return ResponseComposer::json($result);

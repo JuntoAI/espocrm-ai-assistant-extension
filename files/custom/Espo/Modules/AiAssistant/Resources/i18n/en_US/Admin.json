@@ -1,0 +1,6 @@
+{
+    "labels": {
+        "AI Usage Statistics": "AI Usage Statistics",
+        "aiUsageDescription": "Monitor AI token consumption, model usage, tool calls, and per-user breakdown."
+    }
+}

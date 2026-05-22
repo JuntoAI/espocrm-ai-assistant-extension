@@ -21,6 +21,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Utils\Config;
 use Espo\Entities\User;
+use Espo\Modules\AiAssistant\Services\UsageLogger;
 use Espo\ORM\EntityManager;
 
 class PostChat implements Action
@@ -41,6 +42,7 @@ class PostChat implements Action
         private User $user,
         private EntityManager $entityManager,
         private Config $config,
+        private UsageLogger $usageLogger,
     ) {}
 
     /**
@@ -79,7 +81,24 @@ class PostChat implements Action
 
         $backendUrl = $this->getBackendUrl() . '/chat';
 
+        $startTime = hrtime(true);
         $result = $this->postJson($backendUrl, $payload);
+        $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+        // Log usage statistics (non-blocking — errors are silently ignored).
+        try {
+            $this->usageLogger->log(
+                userId: $this->user->getId(),
+                userName: $this->user->getName(),
+                endpoint: 'chat',
+                response: $result,
+                durationMs: $durationMs,
+                sessionId: $payload['sessionId'] ?? null,
+                model: $payload['model'] ?? null,
+            );
+        } catch (\Throwable $e) {
+            // Never let logging failures break the chat response.
+        }
 
         return ResponseComposer::json($result);
     }

@@ -1,0 +1,11 @@
+{
+    "AiUsage": {
+        "paths": [
+            "AiUsage"
+        ],
+        "params": {
+            "controller": "ai-assistant:controllers/ai-usage",
+            "action": "index"
+        }
+    }
+}

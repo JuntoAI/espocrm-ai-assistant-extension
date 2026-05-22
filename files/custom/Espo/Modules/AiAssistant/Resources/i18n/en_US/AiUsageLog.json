@@ -1,0 +1,36 @@
+{
+    "labels": {
+        "AI Usage Statistics": "AI Usage Statistics",
+        "Today": "Today",
+        "Last 7 Days": "Last 7 Days",
+        "Last 30 Days": "Last 30 Days",
+        "Total Tokens": "Total Tokens",
+        "Prompt Tokens": "Prompt Tokens",
+        "Completion Tokens": "Completion Tokens",
+        "Tool Calls": "Tool Calls",
+        "Requests": "Requests",
+        "Errors": "Errors",
+        "Avg Latency": "Avg Latency",
+        "Unique Users": "Unique Users",
+        "Sessions": "Sessions",
+        "Tokens by Model": "Tokens by Model",
+        "Tokens by Day": "Tokens by Day",
+        "Top Tools": "Top Tools",
+        "Per User": "Per User"
+    },
+    "fields": {
+        "userId": "User ID",
+        "userName": "User",
+        "model": "Model",
+        "endpoint": "Endpoint",
+        "promptTokens": "Prompt Tokens",
+        "completionTokens": "Completion Tokens",
+        "totalTokens": "Total Tokens",
+        "toolCalls": "Tool Calls",
+        "toolNames": "Tools Used",
+        "durationMs": "Duration (ms)",
+        "success": "Success",
+        "sessionId": "Session ID",
+        "createdAt": "Date"
+    }
+}

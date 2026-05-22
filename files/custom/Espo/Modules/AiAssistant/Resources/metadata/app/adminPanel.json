@@ -1,0 +1,14 @@
+{
+    "ai": {
+        "label": "AI",
+        "itemList": [
+            {
+                "url": "#AiUsage",
+                "label": "AI Usage Statistics",
+                "iconClass": "fas fa-chart-line",
+                "description": "aiUsageDescription"
+            }
+        ],
+        "order": 80
+    }
+}

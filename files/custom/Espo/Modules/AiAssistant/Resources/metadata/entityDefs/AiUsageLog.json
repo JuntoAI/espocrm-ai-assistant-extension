@@ -1,0 +1,66 @@
+{
+    "fields": {
+        "userId": {
+            "type": "varchar",
+            "maxLength": 24,
+            "index": true
+        },
+        "userName": {
+            "type": "varchar",
+            "maxLength": 150
+        },
+        "model": {
+            "type": "varchar",
+            "maxLength": 100,
+            "index": true
+        },
+        "endpoint": {
+            "type": "varchar",
+            "maxLength": 50,
+            "index": true
+        },
+        "promptTokens": {
+            "type": "int",
+            "default": 0
+        },
+        "completionTokens": {
+            "type": "int",
+            "default": 0
+        },
+        "totalTokens": {
+            "type": "int",
+            "default": 0
+        },
+        "toolCalls": {
+            "type": "int",
+            "default": 0
+        },
+        "toolNames": {
+            "type": "text"
+        },
+        "durationMs": {
+            "type": "int",
+            "default": 0
+        },
+        "success": {
+            "type": "bool",
+            "default": true
+        },
+        "sessionId": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "createdAt": {
+            "type": "datetime",
+            "index": true
+        }
+    },
+    "indexes": {
+        "createdAtModel": {
+            "columns": ["createdAt", "model"]
+        },
+        "createdAtUserId": {
+            "columns": ["createdAt", "userId"]
+        }
+    }
+}

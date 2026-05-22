@@ -1,0 +1,12 @@
+{
+    "entity": true,
+    "object": false,
+    "module": "AiAssistant",
+    "stream": false,
+    "disabled": false,
+    "acl": false,
+    "tab": false,
+    "notifications": false,
+    "importable": false,
+    "isCustom": false
+}

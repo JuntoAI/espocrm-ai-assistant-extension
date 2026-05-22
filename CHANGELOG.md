@@ -4,6 +4,34 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.9.3] - 2026-05-22
+
+### Fixed
+- UsageLogger ID generation: EspoCRM rebuild sets `id` column to `VARCHAR(17)`, not 24. Fixed to generate 17-char IDs matching EspoCRM's convention.
+
+## [1.9.2] - 2026-05-22
+
+### Fixed
+- Chart.js now properly loaded as AMD dependency (`chart-dashlet-chart-js`) in the AI Usage admin page. Charts render correctly when Chart Dashlet extension is installed.
+
+## [1.9.1] - 2026-05-22
+
+### Fixed
+- Admin page routing: replaced broken `#Admin/aiUsage` approach with proper `clientRoutes` metadata + dedicated controller. Page now accessible via `#AiUsage` route linked from Administration panel.
+
+## [1.9.0] - 2026-05-22
+
+### Added
+- **AI Usage Statistics tracking** — every chat, brief, and upload request now logs token usage (prompt/completion/total), model used, tool calls, latency, and success/failure to a dedicated `ai_usage_log` database table.
+- **Admin page (`#Admin/aiUsage`)** — full-page administration view with summary cards (today/7d/30d), daily tokens + tool calls line chart, model breakdown doughnut chart, top tools table, and per-user usage table. Accessible via Administration > AI > AI Usage Statistics.
+- **`UsageLogger` service** — extracts `_usage` metadata from AI Backend responses and persists to DB. Fails silently to never break user-facing requests.
+- **`GET /api/v1/AiAssistant/usageStats` endpoint** — admin-only API returning aggregated stats for today, 7 days, and 30 days including: tokens by model, tokens by day, top tools used, per-user breakdown, request counts, error rates, and average latency.
+- **`AiUsageLog` entity definition** — EspoCRM entity with indexed fields for efficient time-range queries.
+- **`AfterInstall.php` script** — creates the `ai_usage_log` table on extension install with proper indexes.
+
+### Changed
+- `PostChat.php`, `PostBrief.php`, `PostUpload.php` now measure request duration and call `UsageLogger` after each AI Backend response.
+
 ## [1.8.0] - 2026-07-15
 
 ### Added

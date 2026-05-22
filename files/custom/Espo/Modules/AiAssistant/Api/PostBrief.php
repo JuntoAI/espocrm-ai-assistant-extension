@@ -19,6 +19,7 @@ use Espo\Core\Api\ResponseComposer;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Utils\Config;
 use Espo\Entities\User;
+use Espo\Modules\AiAssistant\Services\UsageLogger;
 use Espo\ORM\EntityManager;
 
 class PostBrief implements Action
@@ -39,6 +40,7 @@ class PostBrief implements Action
         private User $user,
         private EntityManager $entityManager,
         private Config $config,
+        private UsageLogger $usageLogger,
     ) {}
 
     /**
@@ -59,7 +61,24 @@ class PostBrief implements Action
 
         $backendUrl = $this->getBackendUrl() . '/brief';
 
+        $startTime = hrtime(true);
         $result = $this->postJson($backendUrl, $payload);
+        $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+        // Log usage statistics (non-blocking).
+        try {
+            $this->usageLogger->log(
+                userId: $this->user->getId(),
+                userName: $this->user->getName(),
+                endpoint: 'brief',
+                response: $result,
+                durationMs: $durationMs,
+                sessionId: null,
+                model: null,
+            );
+        } catch (\Throwable $e) {
+            // Never let logging failures break the brief response.
+        }
 
         return ResponseComposer::json($result);
     }
