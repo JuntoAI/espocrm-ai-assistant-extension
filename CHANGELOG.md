@@ -4,6 +4,16 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.10.0] - 2026-05-25
+
+### Added
+- **Top Tools period selector** — dropdown on the Top Tools panel to switch between Today, Last 7 Days, and Last 30 Days. Backend now returns `topToolsToday`, `topTools7Days`, and `topTools30Days` separately.
+- **Period-over-period comparison** — each summary card (Today / 7 Days / 30 Days) now shows a colored arrow + percentage change next to every metric, comparing against the equivalent previous period (yesterday, previous 7 days, previous 30 days). Green ↑ = growth, red ↓ = decline. Inverted for errors and latency (lower is better).
+
+### Changed
+- `GetUsageStats.php` now computes `previousToday`, `previous7Days`, and `previous30Days` stats using a new `getStatsBetween()` method for bounded date-range queries.
+- Removed the single `topTools` key from the API response; replaced with three period-specific keys.
+
 ## [1.9.3] - 2026-05-22
 
 ### Fixed

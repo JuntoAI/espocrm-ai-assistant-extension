@@ -55,7 +55,16 @@ define('ai-assistant:views/admin/ai-usage', ['view', 'chart-dashlet-chart-js'], 
                 <div class="row">
                     <div class="col-md-6">
                         <div class="panel panel-default">
-                            <div class="panel-heading"><h4 class="panel-title">Top Tools (MCP Calls)</h4></div>
+                            <div class="panel-heading">
+                                <div style="display:flex; align-items:center; justify-content:space-between;">
+                                    <h4 class="panel-title" style="margin:0;">Top Tools (MCP Calls)</h4>
+                                    <select class="form-control ai-tools-period-select" style="width:auto; height:28px; padding:2px 8px; font-size:12px;">
+                                        <option value="30days">Last 30 Days</option>
+                                        <option value="7days">Last 7 Days</option>
+                                        <option value="today">Today</option>
+                                    </select>
+                                </div>
+                            </div>
                             <div class="panel-body ai-table-tools"></div>
                         </div>
                     </div>
@@ -77,10 +86,17 @@ define('ai-assistant:views/admin/ai-usage', ['view', 'chart-dashlet-chart-js'], 
 
         setup() {
             this.statsData = null;
+            this.toolsPeriod = '30days';
         }
 
         afterRender() {
             super.afterRender();
+
+            this.$el.find('.ai-tools-period-select').on('change', (e) => {
+                this.toolsPeriod = e.target.value;
+                this.renderToolsTable();
+            });
+
             this.loadStats();
         }
 
@@ -104,31 +120,95 @@ define('ai-assistant:views/admin/ai-usage', ['view', 'chart-dashlet-chart-js'], 
 
         renderSummary() {
             const periods = [
-                { key: 'today', selector: '.ai-summary-today' },
-                { key: 'last7Days', selector: '.ai-summary-7d' },
-                { key: 'last30Days', selector: '.ai-summary-30d' },
+                { key: 'today', prevKey: 'previousToday', selector: '.ai-summary-today', label: 'vs yesterday' },
+                { key: 'last7Days', prevKey: 'previous7Days', selector: '.ai-summary-7d', label: 'vs prev 7d' },
+                { key: 'last30Days', prevKey: 'previous30Days', selector: '.ai-summary-30d', label: 'vs prev 30d' },
             ];
 
-            periods.forEach(({ key, selector }) => {
+            periods.forEach(({ key, prevKey, selector }) => {
                 const s = this.statsData[key];
+                const prev = this.statsData[prevKey];
                 if (!s) return;
 
-                const html = `
-                    <table class="table table-condensed" style="margin:0;">
-                        <tr><td><strong>Total Tokens</strong></td><td class="text-right">${this.formatNumber(s.totalTokens)}</td></tr>
-                        <tr><td>Prompt</td><td class="text-right">${this.formatNumber(s.promptTokens)}</td></tr>
-                        <tr><td>Completion</td><td class="text-right">${this.formatNumber(s.completionTokens)}</td></tr>
-                        <tr><td><strong>Tool Calls</strong></td><td class="text-right">${this.formatNumber(s.toolCalls)}</td></tr>
-                        <tr><td>Requests</td><td class="text-right">${s.requestCount}</td></tr>
-                        <tr><td>Errors</td><td class="text-right">${s.errorCount}</td></tr>
-                        <tr><td>Avg Latency</td><td class="text-right">${this.formatNumber(s.avgDurationMs)} ms</td></tr>
-                        <tr><td>Users</td><td class="text-right">${s.uniqueUsers}</td></tr>
-                        <tr><td>Sessions</td><td class="text-right">${s.uniqueSessions}</td></tr>
-                    </table>
-                `;
+                const rows = [
+                    { label: 'Total Tokens', value: s.totalTokens, prevValue: prev ? prev.totalTokens : null, bold: true },
+                    { label: 'Prompt', value: s.promptTokens, prevValue: prev ? prev.promptTokens : null },
+                    { label: 'Completion', value: s.completionTokens, prevValue: prev ? prev.completionTokens : null },
+                    { label: 'Tool Calls', value: s.toolCalls, prevValue: prev ? prev.toolCalls : null, bold: true },
+                    { label: 'Requests', value: s.requestCount, prevValue: prev ? prev.requestCount : null },
+                    { label: 'Errors', value: s.errorCount, prevValue: prev ? prev.errorCount : null, invertColor: true },
+                    { label: 'Avg Latency', value: s.avgDurationMs, prevValue: prev ? prev.avgDurationMs : null, suffix: ' ms', invertColor: true },
+                    { label: 'Users', value: s.uniqueUsers, prevValue: prev ? prev.uniqueUsers : null },
+                    { label: 'Sessions', value: s.uniqueSessions, prevValue: prev ? prev.uniqueSessions : null },
+                ];
 
+                let html = '<table class="table table-condensed" style="margin:0;">';
+
+                rows.forEach(row => {
+                    const labelHtml = row.bold ? `<strong>${row.label}</strong>` : row.label;
+                    const valueStr = this.formatNumber(row.value) + (row.suffix || '');
+                    const changeHtml = this.renderChange(row.value, row.prevValue, row.invertColor);
+
+                    html += `<tr>
+                        <td>${labelHtml}</td>
+                        <td class="text-right" style="white-space:nowrap;">${valueStr} ${changeHtml}</td>
+                    </tr>`;
+                });
+
+                html += '</table>';
                 this.$el.find(selector).html(html);
             });
+        }
+
+        /**
+         * Render a change indicator (arrow + percentage) comparing current to previous value.
+         * @param {number} current - Current period value
+         * @param {number|null} previous - Previous period value
+         * @param {boolean} invertColor - If true, increase is bad (red) and decrease is good (green). Used for errors/latency.
+         * @returns {string} HTML string with colored arrow + percentage
+         */
+        renderChange(current, previous, invertColor) {
+            if (previous === null || previous === undefined) return '';
+
+            // If both are zero, no change to show
+            if (previous === 0 && current === 0) return '';
+
+            let pct;
+            let direction; // 'up', 'down', 'flat'
+
+            if (previous === 0) {
+                // From zero to something = new (show as +100% up)
+                pct = 100;
+                direction = 'up';
+            } else {
+                pct = Math.round(((current - previous) / previous) * 100);
+
+                if (pct > 0) {
+                    direction = 'up';
+                } else if (pct < 0) {
+                    direction = 'down';
+                    pct = Math.abs(pct);
+                } else {
+                    direction = 'flat';
+                }
+            }
+
+            if (direction === 'flat') {
+                return '<span style="color:#999; font-size:11px;">→ 0%</span>';
+            }
+
+            const arrow = direction === 'up' ? '↑' : '↓';
+            let color;
+
+            if (invertColor) {
+                // For errors/latency: up is bad (red), down is good (green)
+                color = direction === 'up' ? '#e53935' : '#43a047';
+            } else {
+                // For tokens/requests: up is good (green), down is neutral/red
+                color = direction === 'up' ? '#43a047' : '#e53935';
+            }
+
+            return `<span style="color:${color}; font-size:11px; margin-left:4px;" title="vs previous period">${arrow}${pct}%</span>`;
         }
 
         renderDailyChart() {
@@ -240,9 +320,17 @@ define('ai-assistant:views/admin/ai-usage', ['view', 'chart-dashlet-chart-js'], 
         }
 
         renderToolsTable() {
-            const tools = this.statsData.topTools || [];
+            const periodMap = {
+                'today': 'topToolsToday',
+                '7days': 'topTools7Days',
+                '30days': 'topTools30Days',
+            };
+
+            const dataKey = periodMap[this.toolsPeriod] || 'topTools30Days';
+            const tools = this.statsData[dataKey] || [];
+
             if (tools.length === 0) {
-                this.$el.find('.ai-table-tools').html('<p class="text-muted">No tool usage recorded yet.</p>');
+                this.$el.find('.ai-table-tools').html('<p class="text-muted">No tool usage recorded for this period.</p>');
                 return;
             }
 

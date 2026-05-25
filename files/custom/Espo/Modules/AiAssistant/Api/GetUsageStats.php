@@ -10,7 +10,8 @@
  * - Request count and error rate
  * - Average latency
  * - Per-user breakdown
- * - Top tools used
+ * - Top tools used (per period)
+ * - Period-over-period comparison stats
  *
  * Only accessible to admin users.
  */
@@ -43,16 +44,24 @@ class GetUsageStats implements Action
 
         $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
         $todayStart = $now->format('Y-m-d') . ' 00:00:00';
+        $yesterdayStart = $now->modify('-1 day')->format('Y-m-d') . ' 00:00:00';
         $sevenDaysAgo = $now->modify('-7 days')->format('Y-m-d H:i:s');
+        $fourteenDaysAgo = $now->modify('-14 days')->format('Y-m-d H:i:s');
         $thirtyDaysAgo = $now->modify('-30 days')->format('Y-m-d H:i:s');
+        $sixtyDaysAgo = $now->modify('-60 days')->format('Y-m-d H:i:s');
 
         $result = [
             'today' => $this->getStats($pdo, $todayStart),
+            'previousToday' => $this->getStatsBetween($pdo, $yesterdayStart, $todayStart),
             'last7Days' => $this->getStats($pdo, $sevenDaysAgo),
+            'previous7Days' => $this->getStatsBetween($pdo, $fourteenDaysAgo, $sevenDaysAgo),
             'last30Days' => $this->getStats($pdo, $thirtyDaysAgo),
+            'previous30Days' => $this->getStatsBetween($pdo, $sixtyDaysAgo, $thirtyDaysAgo),
             'tokensByModel' => $this->getTokensByModel($pdo, $thirtyDaysAgo),
             'tokensByDay' => $this->getTokensByDay($pdo, $thirtyDaysAgo),
-            'topTools' => $this->getTopTools($pdo, $thirtyDaysAgo),
+            'topToolsToday' => $this->getTopTools($pdo, $todayStart),
+            'topTools7Days' => $this->getTopTools($pdo, $sevenDaysAgo),
+            'topTools30Days' => $this->getTopTools($pdo, $thirtyDaysAgo),
             'perUser' => $this->getPerUser($pdo, $thirtyDaysAgo),
         ];
 
@@ -78,6 +87,41 @@ class GetUsageStats implements Action
         ");
 
         $stmt->execute(['since' => $since]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        return [
+            'requestCount' => (int) $row['requestCount'],
+            'promptTokens' => (int) $row['promptTokens'],
+            'completionTokens' => (int) $row['completionTokens'],
+            'totalTokens' => (int) $row['totalTokens'],
+            'toolCalls' => (int) $row['toolCalls'],
+            'avgDurationMs' => (int) round((float) $row['avgDurationMs']),
+            'errorCount' => (int) $row['errorCount'],
+            'uniqueUsers' => (int) $row['uniqueUsers'],
+            'uniqueSessions' => (int) $row['uniqueSessions'],
+        ];
+    }
+
+    private function getStatsBetween(\PDO $pdo, string $since, string $until): array
+    {
+        $stmt = $pdo->prepare("
+            SELECT
+                COUNT(*) as requestCount,
+                COALESCE(SUM(prompt_tokens), 0) as promptTokens,
+                COALESCE(SUM(completion_tokens), 0) as completionTokens,
+                COALESCE(SUM(total_tokens), 0) as totalTokens,
+                COALESCE(SUM(tool_calls), 0) as toolCalls,
+                COALESCE(AVG(duration_ms), 0) as avgDurationMs,
+                COALESCE(SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END), 0) as errorCount,
+                COUNT(DISTINCT user_id) as uniqueUsers,
+                COUNT(DISTINCT session_id) as uniqueSessions
+            FROM `ai_usage_log`
+            WHERE `created_at` >= :since
+              AND `created_at` < :until
+              AND `deleted` = 0
+        ");
+
+        $stmt->execute(['since' => $since, 'until' => $until]);
         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         return [
