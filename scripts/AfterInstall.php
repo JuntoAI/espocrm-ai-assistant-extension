@@ -27,6 +27,7 @@ class AfterInstall
                 `completion_tokens` INT DEFAULT 0,
                 `total_tokens` INT DEFAULT 0,
                 `tool_calls` INT DEFAULT 0,
+                `tool_errors` INT DEFAULT 0,
                 `tool_names` TEXT DEFAULT NULL,
                 `duration_ms` INT DEFAULT 0,
                 `success` TINYINT(1) DEFAULT 1,
@@ -41,5 +42,18 @@ class AfterInstall
                 INDEX `idx_endpoint` (`endpoint`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
+
+        // Add tool_errors column if upgrading from a previous version
+        try {
+            $pdo->exec("
+                ALTER TABLE `ai_usage_log`
+                ADD COLUMN `tool_errors` INT DEFAULT 0 AFTER `tool_calls`
+            ");
+        } catch (\PDOException $e) {
+            // Column already exists — safe to ignore (error code 1060 = Duplicate column name)
+            if (strpos($e->getMessage(), '1060') === false) {
+                throw $e;
+            }
+        }
     }
 }

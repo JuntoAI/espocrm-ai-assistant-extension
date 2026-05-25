@@ -40,6 +40,7 @@ class UsageLogger
         $completionTokens = 0;
         $totalTokens = 0;
         $toolCalls = 0;
+        $toolErrors = 0;
         $toolNames = null;
         $success = true;
 
@@ -52,6 +53,7 @@ class UsageLogger
                 $completionTokens = (int) ($usage->completionTokens ?? $usage->candidatesTokenCount ?? 0);
                 $totalTokens = (int) ($usage->totalTokens ?? $usage->totalTokenCount ?? 0);
                 $toolCalls = (int) ($usage->toolCalls ?? 0);
+                $toolErrors = (int) ($usage->toolErrors ?? 0);
 
                 if (isset($usage->toolNames) && is_array($usage->toolNames)) {
                     $toolNames = implode(',', $usage->toolNames);
@@ -103,12 +105,12 @@ class UsageLogger
             INSERT INTO `ai_usage_log`
                 (`id`, `user_id`, `user_name`, `model`, `endpoint`,
                  `prompt_tokens`, `completion_tokens`, `total_tokens`,
-                 `tool_calls`, `tool_names`, `duration_ms`, `success`,
+                 `tool_calls`, `tool_errors`, `tool_names`, `duration_ms`, `success`,
                  `session_id`, `created_at`, `deleted`)
             VALUES
                 (:id, :userId, :userName, :model, :endpoint,
                  :promptTokens, :completionTokens, :totalTokens,
-                 :toolCalls, :toolNames, :durationMs, :success,
+                 :toolCalls, :toolErrors, :toolNames, :durationMs, :success,
                  :sessionId, :createdAt, 0)
         ");
 
@@ -122,6 +124,7 @@ class UsageLogger
             'completionTokens' => $completionTokens,
             'totalTokens' => $totalTokens,
             'toolCalls' => $toolCalls,
+            'toolErrors' => $toolErrors,
             'toolNames' => $toolNames,
             'durationMs' => $durationMs,
             'success' => $success ? 1 : 0,

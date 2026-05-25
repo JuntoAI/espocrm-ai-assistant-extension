@@ -4,6 +4,18 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.11.0] - 2026-05-25
+
+### Added
+- **Tool Errors metric** — the AI Usage Statistics dashboard now shows "Tool Errors" (individual MCP tool call failures within successful chat requests). This surfaces silent degradation where Gemini retries failing tools, wasting tokens and latency, without the overall request failing.
+- New `tool_errors` column in `ai_usage_log` table (auto-migrated on extension upgrade via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`).
+
+### Changed
+- AI Backend `_usage` response now includes `toolErrors` count alongside `toolCalls`.
+- `UsageLogger.php` extracts and persists `toolErrors` from the backend response.
+- `GetUsageStats.php` includes `toolErrors` sum in all period stats (today, 7d, 30d) with period-over-period comparison.
+- Dashboard displays "Tool Errors" row with inverted color coding (increase = red, decrease = green).
+
 ## [1.10.0] - 2026-05-25
 
 ### Added
