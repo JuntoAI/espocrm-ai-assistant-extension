@@ -42,6 +42,7 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
         selectedModel: null,
         sessionId: null,
         isMobile: false,
+        _currentRequest: null,
 
         /**
          * References to DOM elements cached after render.
@@ -146,6 +147,11 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
                                         '<polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>' +
                                     '</svg>' +
                                 '</button>' +
+                                '<button class="ai-panel-btn ai-panel-btn-stop" data-action="stop" title="Stop" aria-label="Stop generation" style="display:none;">' +
+                                    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                                        '<rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect>' +
+                                    '</svg>' +
+                                '</button>' +
                             '</div>' +
                         '</div>' +
 
@@ -179,6 +185,8 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
             this.els.fileInput = this.$el.find('[data-file-input]');
             this.els.modelSelect = this.$el.find('[data-action="selectModel"]');
             this.els.closeBtn = this.$el.find('[data-action="closeMobile"]');
+            this.els.sendBtn = this.$el.find('[data-action="send"]');
+            this.els.stopBtn = this.$el.find('[data-action="stop"]');
         },
 
         // ─── Event Binding ──────────────────────────────────
@@ -192,6 +200,10 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
 
             this.$el.find('[data-action="send"]').on('click', function () {
                 self.sendMessage();
+            });
+
+            this.$el.find('[data-action="stop"]').on('click', function () {
+                self._abortRequest();
             });
 
             this.$el.find('[data-action="newConversation"]').on('click', function () {
@@ -315,10 +327,16 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
             var self = this;
             var apiClient = this._getApiClient();
 
-            apiClient.sendMessage(text, this.selectedModel, this.sessionId, function (err, data) {
+            this._currentRequest = apiClient.sendMessage(text, this.selectedModel, this.sessionId, function (err, data) {
+                self._currentRequest = null;
                 self._setLoading(false);
 
                 if (err) {
+                    // Don't show error message if request was intentionally aborted
+                    if (err.aborted) {
+                        return;
+                    }
+
                     self._addMessage('assistant', err.message || 'Something went wrong. Please try again.', true);
                     return;
                 }
@@ -413,10 +431,28 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
 
             if (loading) {
                 this.els.typing.show();
+                this.els.sendBtn.hide();
+                this.els.stopBtn.show();
                 this._scrollToBottom();
             } else {
                 this.els.typing.hide();
+                this.els.stopBtn.hide();
+                this.els.sendBtn.show();
             }
+        },
+
+        // ─── Abort Request ───────────────────────────────────
+
+        _abortRequest: function () {
+            var request = this._currentRequest;
+            this._currentRequest = null;
+            this._setLoading(false);
+
+            if (request && typeof request.abort === 'function') {
+                request.abort();
+            }
+
+            this._addMessage('assistant', 'Request cancelled.', true);
         },
 
         // ─── File Upload ────────────────────────────────────
@@ -440,10 +476,15 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
             var self = this;
             var apiClient = this._getApiClient();
 
-            apiClient.uploadFile(file, this.selectedModel, this.sessionId, function (err, data) {
+            this._currentRequest = apiClient.uploadFile(file, this.selectedModel, this.sessionId, function (err, data) {
+                self._currentRequest = null;
                 self._setLoading(false);
 
                 if (err) {
+                    if (err.aborted) {
+                        return;
+                    }
+
                     self._addMessage('assistant', err.message || 'Failed to process the file.', true);
                     return;
                 }
@@ -491,11 +532,14 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
                         payload.sessionId = sessionId;
                     }
 
-                    Espo.Ajax.postRequest('AiAssistant/chat', payload)
+                    var aborted = false;
+
+                    var promise = Espo.Ajax.postRequest('AiAssistant/chat', payload)
                         .then(function (response) {
-                            callback(null, response);
+                            if (!aborted) { callback(null, response); }
                         })
                         .catch(function (xhr) {
+                            if (aborted) { return; }
                             var status = xhr && xhr.status;
                             var msg = 'Something went wrong. Please try again.';
 
@@ -511,6 +555,16 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
 
                             callback({message: msg});
                         });
+
+                    return {
+                        abort: function () {
+                            aborted = true;
+                            if (promise && typeof promise.abort === 'function') {
+                                promise.abort();
+                            }
+                            callback({aborted: true});
+                        }
+                    };
                 },
 
                 uploadFile: function (file, model, sessionId, callback) {
@@ -519,13 +573,18 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
                     if (model) { formData.append('model', model); }
                     if (sessionId) { formData.append('sessionId', sessionId); }
 
+                    var aborted = false;
+                    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+
                     fetch('api/v1/AiAssistant/upload', {
                         method: 'POST',
                         credentials: 'include',
                         body: formData,
+                        signal: controller ? controller.signal : undefined,
                     })
                     .then(function (response) {
                         return response.json().then(function (data) {
+                            if (aborted) { return; }
                             if (response.ok) {
                                 callback(null, data);
                             } else {
@@ -535,7 +594,19 @@ define('ai-assistant:views/ai-panel', ['view'], function (View) {
                             }
                         });
                     })
-                    .catch(function () { callback({message: 'Network error. Please check your connection.'}); });
+                    .catch(function (err) {
+                        if (aborted) { return; }
+                        if (err && err.name === 'AbortError') { return; }
+                        callback({message: 'Network error. Please check your connection.'});
+                    });
+
+                    return {
+                        abort: function () {
+                            aborted = true;
+                            if (controller) { controller.abort(); }
+                            callback({aborted: true});
+                        }
+                    };
                 },
             };
         },

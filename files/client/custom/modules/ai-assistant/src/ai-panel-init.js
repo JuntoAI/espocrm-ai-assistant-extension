@@ -293,6 +293,8 @@
         promptHistory: JSON.parse(sessionStorage.getItem('ai-panel-prompt-history') || '[]'),
         historyIndex: -1,
         historyDraft: '',
+        currentXhr: null,
+        currentAbortController: null,
     };
 
     // ── Keyboard shortcut (Ctrl+Shift+A) ──────────────────
@@ -419,7 +421,11 @@
         });
 
         el.querySelector('[data-action="send"]').addEventListener('click', function () {
-            sendMessage(el);
+            if (state.loading) {
+                abortRequest(el);
+            } else {
+                sendMessage(el);
+            }
         });
 
         el.querySelector('[data-action="newChat"]').addEventListener('click', function () {
@@ -677,6 +683,23 @@
         miniText.textContent = text || 'AI Assistant';
     }
 
+    // ── Abort in-flight request ────────────────────────
+    function abortRequest(el) {
+        if (state.currentXhr) {
+            if (typeof state.currentXhr.abort === 'function') {
+                state.currentXhr.abort();
+            }
+            state.currentXhr = null;
+        }
+        if (state.currentAbortController) {
+            state.currentAbortController.abort();
+            state.currentAbortController = null;
+        }
+        setLoading(el, false);
+        addMessage('error', 'Request cancelled.');
+        renderMessages(el);
+    }
+
     // ── Messaging ───────────────────────────────────────
     function sendMessage(el) {
         var input = el.querySelector('[data-input]');
@@ -729,9 +752,11 @@
                         if (state.model) chatPayload.model = state.model;
                         if (state.sessionId) chatPayload.sessionId = state.sessionId;
 
-                        Espo.Ajax.postRequest('AiAssistant/chat', chatPayload)
-                            .then(function (data) { handleResponse(el, data); })
-                            .catch(function () { handleError(el, null); });
+                        var jqXhr = Espo.Ajax.postRequest('AiAssistant/chat', chatPayload);
+                        state.currentXhr = jqXhr;
+                        jqXhr
+                            .then(function (data) { state.currentXhr = null; handleResponse(el, data); })
+                            .catch(function (xhr) { state.currentXhr = null; if (xhr && xhr.statusText === 'abort') return; handleError(el, null); });
                     } else {
                         setLoading(el, false);
                     }
@@ -749,6 +774,7 @@
                 if (state.sessionId) formData.append('sessionId', state.sessionId);
 
                 var xhr = new XMLHttpRequest();
+                state.currentXhr = xhr;
                 xhr.open('POST', window.location.origin + '/api/v1/AiAssistant/upload', true);
                 xhr.withCredentials = true;
 
@@ -787,22 +813,37 @@
             if (state.sessionId) payload.sessionId = state.sessionId;
 
             if (typeof Espo !== 'undefined' && Espo.Ajax) {
-                Espo.Ajax.postRequest('AiAssistant/chat', payload)
+                var jqXhr = Espo.Ajax.postRequest('AiAssistant/chat', payload);
+                state.currentXhr = jqXhr;
+                jqXhr
                     .then(function (data) {
+                        state.currentXhr = null;
                         handleResponse(el, data);
                     })
                     .catch(function (xhr) {
+                        state.currentXhr = null;
+                        if (xhr && xhr.statusText === 'abort') return; // Already handled by abortRequest
                         handleError(el, xhr);
                     });
             } else {
+                var controller = new AbortController();
+                state.currentAbortController = controller;
                 fetch('api/v1/AiAssistant/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
+                    signal: controller.signal,
                 })
                 .then(function (r) { return r.json(); })
-                .then(function (data) { handleResponse(el, data); })
-                .catch(function () { handleError(el, null); });
+                .then(function (data) {
+                    state.currentAbortController = null;
+                    handleResponse(el, data);
+                })
+                .catch(function (err) {
+                    state.currentAbortController = null;
+                    if (err && err.name === 'AbortError') return; // Already handled by abortRequest
+                    handleError(el, null);
+                });
             }
         }
     }
@@ -824,6 +865,8 @@
     }
 
     function handleResponse(el, data) {
+        state.currentXhr = null;
+        state.currentAbortController = null;
         setLoading(el, false);
         if (data.sessionId) state.sessionId = data.sessionId;
 
@@ -834,6 +877,8 @@
     }
 
     function handleError(el, xhr) {
+        state.currentXhr = null;
+        state.currentAbortController = null;
         setLoading(el, false);
         var status = xhr && xhr.status;
         var msg = 'Something went wrong. Please try again.';
@@ -857,6 +902,7 @@
         state.loading = on;
         var statusEl = el.querySelector('[data-status]');
         var statusText = el.querySelector('[data-status-text]');
+        var sendBtn = el.querySelector('[data-action="send"]');
 
         // Clear any pending stage timers
         for (var i = 0; i < state.loadingTimers.length; i++) {
@@ -867,6 +913,14 @@
         if (on) {
             statusEl.style.display = 'flex';
             statusText.textContent = LOADING_STAGES[0].text;
+
+            // Transform send button into stop button
+            if (sendBtn) {
+                sendBtn.innerHTML = '&#9632;'; // ■ square = stop
+                sendBtn.classList.remove('ai-panel-btn-send');
+                sendBtn.classList.add('ai-panel-btn-stop');
+                sendBtn.title = 'Stop request';
+            }
 
             // Schedule progressive status updates
             for (var j = 1; j < LOADING_STAGES.length; j++) {
@@ -883,6 +937,14 @@
             scrollToBottom(el);
         } else {
             statusEl.style.display = 'none';
+
+            // Restore send button
+            if (sendBtn) {
+                sendBtn.innerHTML = '&#9654;'; // ▶ play = send
+                sendBtn.classList.remove('ai-panel-btn-stop');
+                sendBtn.classList.add('ai-panel-btn-send');
+                sendBtn.title = '';
+            }
         }
     }
 

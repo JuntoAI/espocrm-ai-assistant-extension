@@ -62,19 +62,35 @@ define('ai-assistant:helpers/api-client', [], function () {
 
     /**
      * Send a text message via Espo.Ajax (handles EspoCRM auth automatically).
+     * Returns an object with an abort() method to cancel the request.
      */
     ApiClient.prototype.sendMessage = function (message, model, sessionId, callback) {
         var payload = {message: message};
         if (model) { payload.model = model; }
         if (sessionId) { payload.sessionId = sessionId; }
 
-        Espo.Ajax.postRequest(CHAT_ENDPOINT, payload)
-            .then(function (response) { callback(null, response); })
+        var aborted = false;
+
+        var promise = Espo.Ajax.postRequest(CHAT_ENDPOINT, payload)
+            .then(function (response) {
+                if (!aborted) { callback(null, response); }
+            })
             .catch(function (xhr) {
+                if (aborted) { return; }
                 var status = (xhr && xhr.status) || 0;
                 var responseJSON = (xhr && xhr.responseJSON) || null;
                 callback({message: mapErrorMessage(status, responseJSON), status: status});
             });
+
+        return {
+            abort: function () {
+                aborted = true;
+                if (promise && typeof promise.abort === 'function') {
+                    promise.abort();
+                }
+                callback({aborted: true});
+            }
+        };
     };
 
     /**
@@ -84,6 +100,8 @@ define('ai-assistant:helpers/api-client', [], function () {
      * is sent. EspoCRM authenticates the user server-side before the PHP
      * action runs — the PHP proxy then adds the user's API key when
      * forwarding to the AI backend. No auth header manipulation needed.
+     *
+     * Returns an object with an abort() method to cancel the request.
      */
     ApiClient.prototype.uploadFile = function (file, model, sessionId, callback) {
         var formData = new FormData();
@@ -91,13 +109,18 @@ define('ai-assistant:helpers/api-client', [], function () {
         if (model) { formData.append('model', model); }
         if (sessionId) { formData.append('sessionId', sessionId); }
 
+        var aborted = false;
+        var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+
         fetch(UPLOAD_ENDPOINT, {
             method: 'POST',
             credentials: 'include',
             body: formData,
+            signal: controller ? controller.signal : undefined,
         })
         .then(function (response) {
             return response.json().then(function (data) {
+                if (aborted) { return; }
                 if (response.ok) {
                     callback(null, data);
                 } else {
@@ -106,9 +129,19 @@ define('ai-assistant:helpers/api-client', [], function () {
                 }
             });
         })
-        .catch(function () {
+        .catch(function (err) {
+            if (aborted) { return; }
+            if (err && err.name === 'AbortError') { return; }
             callback({message: mapErrorMessage(0, null), status: 0});
         });
+
+        return {
+            abort: function () {
+                aborted = true;
+                if (controller) { controller.abort(); }
+                callback({aborted: true});
+            }
+        };
     };
 
     ApiClient.mapErrorMessage = mapErrorMessage;

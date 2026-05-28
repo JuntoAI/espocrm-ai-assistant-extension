@@ -4,6 +4,11 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.12.2] - 2026-05-28
+
+### Added
+- **Stop/Cancel button** — the send button transforms into a red stop button while the AI is thinking. Clicking it aborts the in-flight request immediately and shows "Request cancelled." in the chat. Works for both text messages and file uploads.
+
 ## [1.12.1] - 2026-05-28
 
 ### Added

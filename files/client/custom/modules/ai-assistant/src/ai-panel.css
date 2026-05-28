@@ -631,6 +631,20 @@
     color: var(--ai-panel-toggle-color);
 }
 
+.ai-panel-btn-stop {
+    background: #dc3545;
+    color: #ffffff;
+    border-color: #dc3545;
+    flex-shrink: 0;
+    animation: ai-panel-fade-in 0.15s ease;
+}
+
+.ai-panel-btn-stop:hover {
+    background: #bb2d3b;
+    border-color: #bb2d3b;
+    color: #ffffff;
+}
+
 .ai-panel-input-buttons {
     display: flex;
     flex-direction: column;
