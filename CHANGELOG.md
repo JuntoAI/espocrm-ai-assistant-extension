@@ -4,6 +4,22 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.12.1] - 2026-05-28
+
+### Added
+- **Help button (?)** — new button in the panel header (next to the reload/new conversation button) that opens a modal explaining all AI Assistant capabilities: natural language CRM operations, daily brief, knowledge base, file upload, web search, and keyboard shortcuts.
+
+## [1.12.0] - 2026-05-28
+
+### Added
+- **Persistent Knowledge Base** — AI now has a knowledge base that persists across conversations. Global knowledge (company info, pitch deck, investment criteria) is shared across all users. Personal knowledge (communication style, personal DNA) is per-user.
+- **Knowledge management tools** — three new AI tools: `list_knowledge`, `update_knowledge`, `delete_knowledge`. Users can manage their knowledge base through natural conversation ("what do you know about me?", "remember that I prefer informal German with familiar contacts", "delete the old pitch deck info").
+- **Welcome hint** — the chat panel now shows a tip about the knowledge base feature on first open, teaching users they can ask the AI what it knows.
+- **Tool labels** — added friendly labels for knowledge tools in the chat UI (e.g., "Updated knowledge base").
+
+### Changed
+- Welcome message area redesigned with flexbox column layout and styled hint card.
+
 ## [1.11.0] - 2026-05-25
 
 ### Added

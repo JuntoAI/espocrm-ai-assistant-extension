@@ -319,17 +319,38 @@
 
 .ai-panel-welcome {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     height: 100%;
     text-align: center;
     color: #6c757d;
     padding: 24px;
+    gap: 12px;
 }
 
 .ai-panel-welcome p {
     margin: 0;
     font-size: 14px;
+}
+
+.ai-panel-welcome-hint {
+    font-size: 12px !important;
+    color: #8b95a0;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 10px 14px;
+    max-width: 320px;
+    line-height: 1.5;
+}
+
+.ai-panel-welcome-hint strong {
+    color: #495057;
+}
+
+.ai-panel-welcome-hint em {
+    color: #0d6efd;
+    font-style: normal;
 }
 
 /* ─── Message Bubbles ────────────────────────────────── */
@@ -917,5 +938,147 @@
     .ai-brief-cmd {
         font-size: 11px;
         padding: 3px 10px;
+    }
+}
+
+
+/* ─── Help Modal ─────────────────────────────────────── */
+
+.ai-help-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1060;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: ai-help-fade-in 0.15s ease;
+}
+
+@keyframes ai-help-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.ai-help-modal {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 520px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    animation: ai-help-slide-up 0.2s ease;
+    overflow: hidden;
+}
+
+@keyframes ai-help-slide-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ai-help-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--ai-panel-border);
+    flex-shrink: 0;
+}
+
+.ai-help-modal-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #212529;
+}
+
+.ai-help-modal-close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    font-size: 22px;
+    color: #6c757d;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ai-help-modal-close:hover {
+    background: #f1f3f5;
+    color: #212529;
+}
+
+.ai-help-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.ai-help-section {
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.ai-help-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.ai-help-section h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #212529;
+    margin: 0 0 6px 0;
+}
+
+.ai-help-section p {
+    font-size: 13px;
+    color: #495057;
+    margin: 0 0 4px 0;
+    line-height: 1.5;
+}
+
+.ai-help-example {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin-top: 4px;
+    font-size: 12px !important;
+    color: #6c757d !important;
+}
+
+.ai-help-example em {
+    color: #2b6cb0;
+    font-style: normal;
+}
+
+/* ─── Help Modal Responsive ──────────────────────────── */
+
+@media (max-width: 767px) {
+    .ai-help-modal {
+        width: 95%;
+        max-height: 85vh;
+    }
+
+    .ai-help-modal-header {
+        padding: 12px 16px;
+    }
+
+    .ai-help-modal-body {
+        padding: 16px;
+    }
+
+    .ai-help-modal-title {
+        font-size: 15px;
     }
 }

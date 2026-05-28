@@ -273,6 +273,9 @@
         search_notes: 'Searched notes',
         health_check: 'Checked system',
         fetch_url: 'Fetched webpage',
+        list_knowledge: 'Checked knowledge base',
+        update_knowledge: 'Updated knowledge base',
+        delete_knowledge: 'Removed from knowledge base',
     };
 
     // ── State ───────────────────────────────────────────
@@ -369,6 +372,9 @@
                             '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>' +
                         '</button>' +
                         '<button class="ai-panel-btn" data-action="newChat" title="New Conversation">&#8634;</button>' +
+                        '<button class="ai-panel-btn ai-panel-btn-help" data-action="showHelp" title="What can I do?">' +
+                            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>' +
+                        '</button>' +
                         '<button class="ai-panel-btn ai-panel-btn-minimize" data-action="minimize" title="Minimize (Ctrl+Shift+A)">' +
                             '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>' +
                         '</button>' +
@@ -376,7 +382,10 @@
                     '</div>' +
                 '</div>' +
                 '<div class="ai-panel-messages" data-messages>' +
-                    '<div class="ai-panel-welcome"><p>How can I help you with your CRM today?</p></div>' +
+                    '<div class="ai-panel-welcome">' +
+                        '<p>How can I help you with your CRM today?</p>' +
+                        '<p class="ai-panel-welcome-hint">💡 Tip: I have a <strong>knowledge base</strong> that remembers context across conversations. Ask me <em>"what do you know about me?"</em> or tell me to remember something.</p>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="ai-panel-status" data-status style="display:none">' +
                     '<span class="ai-panel-status-icon"></span>' +
@@ -450,6 +459,10 @@
             state.minimized = false;
             sessionStorage.removeItem('ai-panel-minimized');
             applyState(el);
+        });
+
+        el.querySelector('[data-action="showHelp"]').addEventListener('click', function () {
+            showHelpModal(el);
         });
 
         el.querySelector('[data-action="expand"]').addEventListener('click', function () {
@@ -1024,6 +1037,79 @@
     function escapeHtml(s) {
         if (!s) return '';
         return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Help Modal ────────────────────────────────────
+    function showHelpModal(el) {
+        // Remove existing modal if any
+        var existing = document.querySelector('.ai-help-modal-overlay');
+        if (existing) existing.remove();
+
+        var overlay = document.createElement('div');
+        overlay.className = 'ai-help-modal-overlay';
+        overlay.innerHTML =
+            '<div class="ai-help-modal">' +
+                '<div class="ai-help-modal-header">' +
+                    '<span class="ai-help-modal-title">🤖 AI Assistant — What can I do?</span>' +
+                    '<button class="ai-help-modal-close" data-action="closeHelp">&times;</button>' +
+                '</div>' +
+                '<div class="ai-help-modal-body">' +
+                    '<div class="ai-help-section">' +
+                        '<h4>💬 Natural Language CRM</h4>' +
+                        '<p>Ask me anything about your CRM in plain language. I can search, create, update, and manage contacts, accounts, leads, opportunities, meetings, tasks, calls, and cases.</p>' +
+                        '<p class="ai-help-example"><em>"Show me all leads from last week"</em></p>' +
+                        '<p class="ai-help-example"><em>"Create a meeting with Delta Partners tomorrow at 10am"</em></p>' +
+                    '</div>' +
+                    '<div class="ai-help-section">' +
+                        '<h4>📋 Daily Brief</h4>' +
+                        '<p>Every time you open the panel, I analyze your CRM data and suggest actions — follow-ups, overdue tasks, upcoming meetings, and leads that need attention. Click any suggestion to execute it.</p>' +
+                    '</div>' +
+                    '<div class="ai-help-section">' +
+                        '<h4>🧠 Knowledge Base</h4>' +
+                        '<p>I remember context across conversations. Tell me about your company, investment criteria, communication preferences, or anything else — I\'ll use it in future interactions.</p>' +
+                        '<p class="ai-help-example"><em>"What do you know about me?"</em></p>' +
+                        '<p class="ai-help-example"><em>"Remember that we focus on Pre-Seed and Seed stage startups"</em></p>' +
+                    '</div>' +
+                    '<div class="ai-help-section">' +
+                        '<h4>📎 File Upload</h4>' +
+                        '<p>Upload PDFs, images, or text files and I\'ll analyze them in context. Great for pitch decks, contracts, or data imports.</p>' +
+                    '</div>' +
+                    '<div class="ai-help-section">' +
+                        '<h4>🔍 Web Search</h4>' +
+                        '<p>I can search the web for current information — company research, market data, or anything you need to enrich your CRM records.</p>' +
+                    '</div>' +
+                    '<div class="ai-help-section">' +
+                        '<h4>⌨️ Shortcuts</h4>' +
+                        '<p><strong>Ctrl+Shift+A</strong> — Toggle panel<br>' +
+                        '<strong>Enter</strong> — Send message<br>' +
+                        '<strong>Shift+Enter</strong> — New line<br>' +
+                        '<strong>↑ / ↓</strong> — Browse prompt history</p>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        document.body.appendChild(overlay);
+
+        // Close on button click
+        overlay.querySelector('[data-action="closeHelp"]').addEventListener('click', function () {
+            overlay.remove();
+        });
+
+        // Close on overlay click (outside modal)
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+
+        // Close on Escape key
+        function onEsc(e) {
+            if (e.key === 'Escape') {
+                overlay.remove();
+                document.removeEventListener('keydown', onEsc);
+            }
+        }
+        document.addEventListener('keydown', onEsc);
     }
 
     // ── Start ───────────────────────────────────────────
