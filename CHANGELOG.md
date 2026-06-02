@@ -4,6 +4,19 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.13.0] - 2026-06-02
+
+### Added
+- **Cached token tracking** — usage stats now record `cached_tokens` (Vertex implicit cache hits, billed at ~10% of standard input rate). The usage dashboard shows a "Cached" row with the cache-hit percentage of prompt tokens, so the true cost impact is visible. New `cached_tokens` column is added to `ai_usage_log` automatically on upgrade.
+
+### Changed
+- **Per-request tool subsetting** (requires AI backend 1.3.0) — the assistant now sends only the tool schemas relevant to each message plus a core always-on set, instead of all 46. Cuts prompt tokens substantially with no loss of capability. A property-based test guards that core tools are never dropped.
+
+## [1.12.3] - 2026-06-02
+
+### Fixed
+- **Chat timeout on complex prompts** — increased AJAX timeout from EspoCRM default (60s) to 5 minutes for AI chat requests. Multi-tool-call prompts (email drafting, bulk searches) no longer get killed client-side before the backend responds.
+
 ## [1.12.2] - 2026-05-28
 
 ### Added

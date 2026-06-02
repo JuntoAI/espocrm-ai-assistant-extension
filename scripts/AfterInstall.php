@@ -26,6 +26,7 @@ class AfterInstall
                 `prompt_tokens` INT DEFAULT 0,
                 `completion_tokens` INT DEFAULT 0,
                 `total_tokens` INT DEFAULT 0,
+                `cached_tokens` INT DEFAULT 0,
                 `tool_calls` INT DEFAULT 0,
                 `tool_errors` INT DEFAULT 0,
                 `tool_names` TEXT DEFAULT NULL,
@@ -48,6 +49,19 @@ class AfterInstall
             $pdo->exec("
                 ALTER TABLE `ai_usage_log`
                 ADD COLUMN `tool_errors` INT DEFAULT 0 AFTER `tool_calls`
+            ");
+        } catch (\PDOException $e) {
+            // Column already exists — safe to ignore (error code 1060 = Duplicate column name)
+            if (strpos($e->getMessage(), '1060') === false) {
+                throw $e;
+            }
+        }
+
+        // Add cached_tokens column if upgrading from a previous version
+        try {
+            $pdo->exec("
+                ALTER TABLE `ai_usage_log`
+                ADD COLUMN `cached_tokens` INT DEFAULT 0 AFTER `total_tokens`
             ");
         } catch (\PDOException $e) {
             // Column already exists — safe to ignore (error code 1060 = Duplicate column name)

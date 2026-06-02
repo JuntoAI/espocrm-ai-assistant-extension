@@ -63,6 +63,9 @@ define('ai-assistant:helpers/api-client', [], function () {
     /**
      * Send a text message via Espo.Ajax (handles EspoCRM auth automatically).
      * Returns an object with an abort() method to cancel the request.
+     *
+     * Uses a 5-minute timeout since AI responses can involve multiple tool
+     * calls that take well beyond EspoCRM's default 60s ajaxTimeout.
      */
     ApiClient.prototype.sendMessage = function (message, model, sessionId, callback) {
         var payload = {message: message};
@@ -71,7 +74,7 @@ define('ai-assistant:helpers/api-client', [], function () {
 
         var aborted = false;
 
-        var promise = Espo.Ajax.postRequest(CHAT_ENDPOINT, payload)
+        var promise = Espo.Ajax.postRequest(CHAT_ENDPOINT, payload, {timeout: 300000})
             .then(function (response) {
                 if (!aborted) { callback(null, response); }
             })

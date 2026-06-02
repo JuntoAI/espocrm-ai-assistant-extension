@@ -133,6 +133,7 @@ define('ai-assistant:views/admin/ai-usage', ['view', 'chart-dashlet-chart-js'], 
                 const rows = [
                     { label: 'Total Tokens', value: s.totalTokens, prevValue: prev ? prev.totalTokens : null, bold: true },
                     { label: 'Prompt', value: s.promptTokens, prevValue: prev ? prev.promptTokens : null },
+                    { label: 'Cached', value: s.cachedTokens || 0, prevValue: prev ? (prev.cachedTokens || 0) : null, suffix: this.cacheHitSuffix(s) },
                     { label: 'Completion', value: s.completionTokens, prevValue: prev ? prev.completionTokens : null },
                     { label: 'Tool Calls', value: s.toolCalls, prevValue: prev ? prev.toolCalls : null, bold: true },
                     { label: 'Tool Errors', value: s.toolErrors, prevValue: prev ? prev.toolErrors : null, invertColor: true },
@@ -365,6 +366,19 @@ define('ai-assistant:views/admin/ai-usage', ['view', 'chart-dashlet-chart-js'], 
         formatNumber(n) {
             if (n === null || n === undefined) return '0';
             return Number(n).toLocaleString();
+        }
+
+        /**
+         * Build a suffix showing cached tokens as a percentage of prompt tokens
+         * (the implicit-cache hit rate). Higher is better — those tokens are
+         * billed at ~10% of the standard input rate.
+         */
+        cacheHitSuffix(s) {
+            const prompt = s.promptTokens || 0;
+            const cached = s.cachedTokens || 0;
+            if (prompt <= 0 || cached <= 0) return '';
+            const pct = Math.round((cached / prompt) * 100);
+            return ` (${pct}% hit)`;
         }
 
         escapeHtml(str) {

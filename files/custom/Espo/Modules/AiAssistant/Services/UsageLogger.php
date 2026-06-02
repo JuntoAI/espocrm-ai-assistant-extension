@@ -39,6 +39,7 @@ class UsageLogger
         $promptTokens = 0;
         $completionTokens = 0;
         $totalTokens = 0;
+        $cachedTokens = 0;
         $toolCalls = 0;
         $toolErrors = 0;
         $toolNames = null;
@@ -52,6 +53,7 @@ class UsageLogger
                 $promptTokens = (int) ($usage->promptTokens ?? $usage->promptTokenCount ?? 0);
                 $completionTokens = (int) ($usage->completionTokens ?? $usage->candidatesTokenCount ?? 0);
                 $totalTokens = (int) ($usage->totalTokens ?? $usage->totalTokenCount ?? 0);
+                $cachedTokens = (int) ($usage->cachedTokens ?? $usage->cachedContentTokenCount ?? 0);
                 $toolCalls = (int) ($usage->toolCalls ?? 0);
                 $toolErrors = (int) ($usage->toolErrors ?? 0);
 
@@ -104,12 +106,12 @@ class UsageLogger
         $stmt = $pdo->prepare("
             INSERT INTO `ai_usage_log`
                 (`id`, `user_id`, `user_name`, `model`, `endpoint`,
-                 `prompt_tokens`, `completion_tokens`, `total_tokens`,
+                 `prompt_tokens`, `completion_tokens`, `total_tokens`, `cached_tokens`,
                  `tool_calls`, `tool_errors`, `tool_names`, `duration_ms`, `success`,
                  `session_id`, `created_at`, `deleted`)
             VALUES
                 (:id, :userId, :userName, :model, :endpoint,
-                 :promptTokens, :completionTokens, :totalTokens,
+                 :promptTokens, :completionTokens, :totalTokens, :cachedTokens,
                  :toolCalls, :toolErrors, :toolNames, :durationMs, :success,
                  :sessionId, :createdAt, 0)
         ");
@@ -123,6 +125,7 @@ class UsageLogger
             'promptTokens' => $promptTokens,
             'completionTokens' => $completionTokens,
             'totalTokens' => $totalTokens,
+            'cachedTokens' => $cachedTokens,
             'toolCalls' => $toolCalls,
             'toolErrors' => $toolErrors,
             'toolNames' => $toolNames,
