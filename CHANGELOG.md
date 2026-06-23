@@ -4,6 +4,16 @@ All notable changes to the AI Assistant Extension are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [1.14.0] - 2026-06-23
+
+### Added
+- **Thinking-level model variants** — the model dropdown now offers "Gemini 3.5 Flash" (fast, LOW thinking) and "Gemini 3.5 Flash (thinking)" (deep reasoning, default thinking budget). The fast variant responds in ~1s per tool round; the thinking variant uses unbounded reasoning for complex multi-step tasks.
+- **Circuit breaker for tool-call loops** — if the AI model repeatedly fails the same tool call (2+ times), the system automatically forces a text response instead of looping indefinitely. Prevents the "thinking forever" hang that occurred when the model hallucinated invalid entity IDs.
+
+### Changed
+- **Default model** changed from `gemini-3.5-flash` to `gemini-3.5-flash:thinking-low` for dramatically faster response times (sub-second per round vs 60s+).
+- **System prompt efficiency rule** — explicitly tells the model to never retry a failed tool call with the same arguments.
+
 ## [1.13.0] - 2026-06-02
 
 ### Added
